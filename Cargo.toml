@@ -1,0 +1,22 @@
+[package]
+name = "brotlic"
+version = "0.1.0"
+edition = "2021"
+authors = ["Aron Parker <hl3mukkel@gmail.com>", "The Brotli Authors"]
+description = """
+Bindings to the brotli library featuring a low-overhead encoder and decoder,
+`Write`rs and `Read`ers for compression and decompression at customizable compression
+qualities and window sizes.
+"""
+license = "MIT OR Apache-2.0"
+documentation = "https://docs.rs/brotlic/"
+repository = "https://github.com/AronParker/brotlic"
+keywords = ["brotli", "compression", "decompression"]
+categories = ["compression", "api-bindings"]
+readme = "README.md"
+
+[dependencies]
+brotlic-sys = { version = "0.1.0", path = "brotlic-sys" }
+
+[workspace]
+members = [ "brotlic-sys" ]
