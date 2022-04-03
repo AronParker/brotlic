@@ -1,5 +1,5 @@
 use crate::{
-    BlockBits, CompressionMode, IntoInnerError, LargeWindowSize, ParameterError, Quality,
+    BlockSize, CompressionMode, IntoInnerError, LargeWindowSize, ParameterError, Quality,
     WindowSize,
 };
 use brotlic_sys::*;
@@ -131,7 +131,7 @@ pub struct BrotliEncoderOptions {
     mode: Option<CompressionMode>,
     quality: Option<Quality>,
     window_size: Option<LargeWindowSize>,
-    block_bits: Option<BlockBits>,
+    block_bits: Option<BlockSize>,
     disable_context_modeling: Option<bool>,
     size_hint: Option<u32>,
     postfix_bits: Option<u32>,
@@ -174,7 +174,7 @@ impl BrotliEncoderOptions {
         self
     }
 
-    pub fn block_bits(&mut self, block_bits: BlockBits) -> &mut Self {
+    pub fn block_bits(&mut self, block_bits: BlockSize) -> &mut Self {
         self.block_bits = Some(block_bits);
         self
     }
@@ -276,13 +276,6 @@ impl Default for BrotliEncoderOptions {
     fn default() -> Self {
         BrotliEncoderOptions::new()
     }
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum DecoderResult {
-    Success,
-    NeedsMoreInput,
-    NeedsMoreOutput,
 }
 
 #[derive(Debug)]

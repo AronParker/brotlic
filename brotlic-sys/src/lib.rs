@@ -1,5 +1,6 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
+#![allow(rustdoc::broken_intra_doc_links)]
 
 use std::ffi::c_void;
 use std::marker;
