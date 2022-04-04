@@ -4,7 +4,7 @@
 [![Released API docs](https://docs.rs/brotlic/badge.svg)](https://docs.rs/brotlic)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-Brotlic (or BrotlyC) is a thin wrapper around [brotli](https://github.com/google/brotli). It
+Brotlic (or BrotliC) is a thin wrapper around [brotli](https://github.com/google/brotli). It
 provides Rust bindings to all compression and decompression APIs. On the fly compression and
 decompression is supported for both `BufRead` and `Write` via `CompressorReader<R>`,
 `CompressorWriter<W>`, `DecompressorReader<R>` and `DecompressorWriter<W>`. For low-level
