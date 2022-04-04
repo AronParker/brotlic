@@ -1,3 +1,120 @@
+//! # Brotlic
+//!
+//! Brotlic (or BrotlyC) is a thin wrapper around [brotli](https://github.com/google/brotli). It
+//! provides Rust bindings to all compression and decompression APIs. On the fly compression and
+//! decompression is supported for both `BufRead` and `Write` via [`CompressorReader<R>`,
+//! `CompressorWriter<W>`, `DecompressorReader<R>` and `DecompressorWriter<W>`. For low-level
+//! instances, see `BrotliEncoder` and `BrotliDecoder`. These can be configured via
+//! `BrotliEncoderOptions` and `BrotliDecoderOptions` respectively.
+//!
+//! ## High level abstractions
+//!
+//! When dealing with [`BufRead`]:
+//!
+//! * [`DecompressorReader<R>`] - Reads a brotli compressed input stream and decompresses it.
+//! * [`CompressorReader<R>`] - Reads a stream and compresses it while reading.
+//!
+//! When dealing with [`Write`]:
+//!
+//! * [`CompressorWriter<W>`] - Writes brotli compressed data to the underlying writer.
+//! * [`DecompressorWriter<W>`] - Writes brotli decompressed data to the underlying writer.
+//!
+//! To simplify this decision, the following table outlines all the differences:
+//!
+//! |                           | Input        | Output       | Wraps       |
+//! |---------------------------|--------------|--------------|-------------|
+//! | [`CompressorReader<R>`]   | Uncompressed | Compressed   | [`BufRead`] |
+//! | [`DecompressorReader<R>`] | Compressed   | Uncompressed | [`BufRead`] |
+//! | [`CompressorWriter<W>`]   | Uncompressed | Compressed   | [`Write`]   |
+//! | [`DecompressorWriter<W>`] | Compressed   | Uncompressed | [`Write`]   |
+//!
+//! [`BufRead`]: https://doc.rust-lang.org/std/io/trait.BufRead.html
+//! [`Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
+//!
+//! To compress a file with brotli:
+//!
+//! ```no_run
+//! use std::fs::File;
+//! use std::io::{self, Write};
+//! use brotlic::CompressorWriter;
+//!
+//! let mut input = File::open("test.txt")?; // uncompressed text file
+//! let mut output = File::create("test.brotli")?; // compressed text output file
+//! let mut output_compressed = CompressorWriter::new(output);
+//!
+//! output_compressed.write_all(b"test")?;
+//!
+//! # Ok::<(), io::Error>(())
+//! ```
+//!
+//! To decompress that same file:
+//!
+//! ```no_run
+//! use std::fs::File;
+//! use std::io::{self, BufReader, Read};
+//! use brotlic::DecompressorReader;
+//!
+//! let mut input = BufReader::new(File::open("test.brotli")?); // uncompressed text file
+//! let mut input_decompressed = DecompressorReader::new(input); // requires BufRead
+//!
+//! let mut text = String::new();
+//! input_decompressed.read_to_string(&mut text)?;
+//!
+//! assert_eq!(text, "test");
+//!
+//! # Ok::<(), io::Error>(())
+//! ```
+//!
+//! To compress and decompress in memory:
+//!
+//! ```
+//! use std::io::{self, Cursor, Read, Write};
+//! use brotlic::{CompressorWriter, DecompressorReader};
+//!
+//! let input = vec![0; 1024];
+//!
+//! // create a wrapper around Write that supports on the fly brotli compression.
+//! let mut compressor = CompressorWriter::new(Cursor::new(Vec::new())); // write to memory
+//! compressor.write_all(input.as_slice());
+//! let encoded_input = compressor.into_inner()?.into_inner(); // read to vec
+//!
+//! // create a wrapper around BufRead that supports on the fly brotli decompression.
+//! let mut decompressed_reader = DecompressorReader::new(Cursor::new(encoded_input));
+//! let mut decoded_input = Vec::new();
+//!
+//! decompressed_reader.read_to_end(&mut decoded_input)?;
+//!
+//! assert_eq!(input, decoded_input);
+//!
+//! # Ok::<(), io::Error>(())
+//! ```
+//!
+//! ## Customizing compression quality
+//!
+//! Sometimes it can be desirable to trade run-time costs for an even better compression ratio:
+//!
+//! ```
+//! use std::io::Cursor;
+//! use brotlic::{BlockSize, BrotliEncoderOptions, CompressorWriter, Quality, WindowSize};
+//! # use brotlic::ParameterError;
+//!
+//! let encoder = BrotliEncoderOptions::new()
+//!     .quality(Quality::best())
+//!     .window_size(WindowSize::best())
+//!     .block_size(BlockSize::best())
+//!     .build()?;
+//!
+//! let writer = Cursor::new(Vec::new());
+//! let compressed_writer = CompressorWriter::with_encoder(encoder, writer);
+//!
+//! # Ok::<(), ParameterError>(())
+//! ```
+//!
+//! It is recommended to not use the encoder directly but instead pass it onto the higher level
+//! abstractions.
+
+#![warn(missing_docs)]
+
 pub mod decode;
 pub mod encode;
 
@@ -28,6 +145,10 @@ impl Quality {
     ///
     /// The range of valid qualities is from 0 to 11 inclusive, where 0 is the worst possible
     /// quality and 11 is the best possible quality.
+    ///
+    /// # Errors
+    ///
+    /// An [`Err`] will be returned if the `value` is out of the range of valid qualities.
     ///
     /// # Examples
     ///
@@ -111,6 +232,10 @@ impl WindowSize {
     /// Consturcts a new sliding window size to use for brotli compression.
     ///
     /// Valid `bits` range from 10 (1 KiB) to 24 (16 MiB) inclusive.
+    ///
+    /// # Errors
+    ///
+    /// An [`Err`] will be returned if the `bits` are out of the range of valid window sizes.
     ///
     /// # Examples
     ///
@@ -205,6 +330,10 @@ impl TryFrom<LargeWindowSize> for WindowSize {
     ///
     /// This only works if the large window size is currently set to a value lower or equal to
     /// [`WindowSize::best()`].
+    ///
+    /// # Errors
+    ///
+    /// Large window size does not fit into a window size.
     fn try_from(large_window_size: LargeWindowSize) -> Result<Self, Self::Error> {
         WindowSize::new(large_window_size.0)
     }
@@ -241,6 +370,10 @@ impl LargeWindowSize {
     /// Consturcts a new large sliding window size (in bits) to use for brotli compression.
     ///
     /// Valid `bits` range from 10 (1 KiB) to 30 (1 GiB) inclusive.
+    ///
+    /// # Errors
+    ///
+    /// An [`Err`] will be returned if the `bits` are out of the range of valid large window sizes.
     ///
     /// # Examples
     ///
@@ -362,6 +495,10 @@ impl BlockSize {
     ///
     /// Valid `bits` range from 16 to 24 inclusive.
     ///
+    /// # Errors
+    ///
+    /// An [`Err`] will be returned if the `bits` are out of the range of valid block sizes.
+    ///
     /// # Examples
     ///
     /// ```
@@ -433,7 +570,7 @@ impl fmt::Display for BlockSizeError {
 
 impl error::Error for BlockSizeError {}
 
-/// Tune brotli compression for a particular type of content.
+/// Allows to tune a brotli compressor for a specific type of input.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum CompressionMode {
     /// No known attributes about the input data.
@@ -468,9 +605,10 @@ impl fmt::Display for CompressionError {
 
 impl error::Error for CompressionError {}
 
+/// a specialized [`Result`] type returned by [`compress`].
 pub type CompressionResult<T> = Result<T, CompressionError>;
 
-/// An error returned by [`decompress`]
+/// An error returned by [`decompress`].
 #[derive(Debug)]
 pub struct DecompressionError;
 
@@ -482,17 +620,43 @@ impl fmt::Display for DecompressionError {
 
 impl error::Error for DecompressionError {}
 
+/// a specialized [`Result`] type returned by [`decompress`].
 pub type DecompressionResult<T> = Result<T, DecompressionError>;
 
-/// An error returned by [`BrotliDecoderOptions::build`]
+/// An error returned by [`BrotliEncoderOptions::build`] and [`BrotliDecoderOptions::build`]
 ///
+/// [`BrotliEncoderOptions::build`]: encode::BrotliEncoderOptions::build
 /// [`BrotliDecoderOptions::build`]: decode::BrotliDecoderOptions::build
-#[derive(Debug)]
-pub struct ParameterError;
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum ParameterError {
+    /// The encoder or decoder returned an error.
+    ///
+    /// This error originates from `BrotliEncoderSetParameter` or `BrotliDecoderSetParameter` being
+    /// unsuccessful.
+    Generic,
+
+    /// Postfix bits were out of range.
+    InvalidPostfix,
+
+    /// Direct distance codes were out of range or were given in invalid increments.
+    InvalidDirectDistanceCodes,
+
+    /// The stream offset was beyond its maximum offset.
+    InvalidStreamOffset,
+}
 
 impl fmt::Display for ParameterError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("invalid parameter")
+        match self {
+            ParameterError::Generic =>
+                f.write_str("invalid parameter"),
+            ParameterError::InvalidPostfix =>
+                f.write_str("invalid number of postfix bits"),
+            ParameterError::InvalidDirectDistanceCodes =>
+                f.write_str("invalid number of direct distance codes"),
+            ParameterError::InvalidStreamOffset =>
+                f.write_str("stream offset was out of range"),
+        }
     }
 }
 
@@ -509,11 +673,11 @@ impl error::Error for ParameterError {}
 ///
 /// # Errors
 ///
-/// This function will fail if:
+/// An [`Err`] will be returned if:
 ///
 /// * `output` is not large enough to contain the compressed data
 /// * A generic compression error occurs
-/// * An out of memory error occured during compression
+/// * memory allocation failed
 ///
 /// # Examples
 ///
@@ -585,10 +749,10 @@ pub fn compress_bound(input_size: usize, quality: Quality) -> Option<usize> {
 ///
 /// # Errors
 ///
-/// This function will fail if:
+/// An [`Err`] will be returned if:
 ///
 /// * `input` is corrupted
-/// * memory allocations failed
+/// * memory allocation failed
 /// * `output` is not large enough to hold uncompressed `input`
 ///
 /// # Examples
@@ -634,40 +798,50 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> DecompressionResult<usize>
     }
 }
 
+/// An error returned by `into_inner`.
+///
+/// This error combines an error that happened while processing data, and the instance
+/// object which may be used to recover from the condition.
 #[derive(Debug)]
-pub struct IntoInnerError<W>(W, io::Error);
+pub struct IntoInnerError<I>(I, io::Error);
 
-impl<W> IntoInnerError<W> {
-    fn new(writer: W, error: io::Error) -> Self {
-        Self(writer, error)
+impl<I> IntoInnerError<I> {
+    fn new(instance: I, error: io::Error) -> Self {
+        Self(instance, error)
     }
 
+    /// Returns the error which caused the call to `into_inner()` to fail.
     pub fn error(&self) -> &io::Error {
         &self.1
     }
 
-    pub fn into_inner(self) -> W {
+    /// Returns the instance which generated the error
+    pub fn into_inner(self) -> I {
         self.0
     }
 
+    /// Returns the error which caused the `into_inner` call to fail. This is used to obtain
+    /// ownership of the error in contrast to [`error`].
     pub fn into_error(self) -> io::Error {
         self.1
     }
 
-    pub fn into_parts(self) -> (io::Error, W) {
+    /// Returns both the error and the instance that generated it. This is used to obtain ownership
+    /// of both of them.
+    pub fn into_parts(self) -> (io::Error, I) {
         (self.1, self.0)
     }
 }
 
-impl<W> From<IntoInnerError<W>> for io::Error {
-    fn from(iie: IntoInnerError<W>) -> io::Error {
+impl<I> From<IntoInnerError<I>> for io::Error {
+    fn from(iie: IntoInnerError<I>) -> io::Error {
         iie.1
     }
 }
 
-impl<W: fmt::Debug> error::Error for IntoInnerError<W> {}
+impl<I: fmt::Debug> error::Error for IntoInnerError<I> {}
 
-impl<W> fmt::Display for IntoInnerError<W> {
+impl<I> fmt::Display for IntoInnerError<I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.error().fmt(f)
     }
