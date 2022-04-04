@@ -6,11 +6,10 @@
 
 Brotlic (or BrotlyC) is a thin wrapper around [brotli](https://github.com/google/brotli). It
 provides Rust bindings to all compression and decompression APIs. On the fly compression and
-decompression is supported for both `BufRead` and `Write` via [`CompressorReader<R>`,
+decompression is supported for both `BufRead` and `Write` via 'CompressorReader<R>`,
 `CompressorWriter<W>`, `DecompressorReader<R>` and `DecompressorWriter<W>`. For low-level
 instances, see `BrotliEncoder` and `BrotliDecoder`. These can be configured via
 `BrotliEncoderOptions` and `BrotliDecoderOptions` respectively.
-
 
 ## Requirements
 
@@ -20,22 +19,22 @@ A __C__ compiler is required for building [brotli](https://github.com/google/bro
 
 When dealing with [`BufRead`]:
 
-* [`DecompressorReader<R>`] - Reads a brotli compressed input stream and decompresses it.
-* [`CompressorReader<R>`] - Reads a stream and compresses it while reading.
+* `DecompressorReader<R>` - Reads a brotli compressed input stream and decompresses it.
+* `CompressorReader<R>` - Reads a stream and compresses it while reading.
 
 When dealing with [`Write`]:
 
-* [`CompressorWriter<W>`] - Writes brotli compressed data to the underlying writer.
-* [`DecompressorWriter<W>`] - Writes brotli decompressed data to the underlying writer.
+* `CompressorWriter<W>` - Writes brotli compressed data to the underlying writer.
+* `DecompressorWriter<W>` - Writes brotli decompressed data to the underlying writer.
 
 To simplify this decision, the following table outlines all the differences:
 
 |                           | Input        | Output       | Wraps       |
 |---------------------------|--------------|--------------|-------------|
-| [`CompressorReader<R>`]   | Uncompressed | Compressed   | [`BufRead`] |
-| [`DecompressorReader<R>`] | Compressed   | Uncompressed | [`BufRead`] |
-| [`CompressorWriter<W>`]   | Uncompressed | Compressed   | [`Write`]   |
-| [`DecompressorWriter<W>`] | Compressed   | Uncompressed | [`Write`]   |
+| `CompressorReader<R>`     | Uncompressed | Compressed   | [`BufRead`] |
+| `DecompressorReader<R>`   | Compressed   | Uncompressed | [`BufRead`] |
+| `CompressorWriter<W>`     | Uncompressed | Compressed   | [`Write`]   |
+| `DecompressorWriter<W>`   | Compressed   | Uncompressed | [`Write`]   |
 
 [`BufRead`]: https://doc.rust-lang.org/std/io/trait.BufRead.html
 [`Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
