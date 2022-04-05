@@ -362,6 +362,7 @@ impl BrotliEncoderOptions {
     /// # Errors
     ///
     /// If any of the preconditions of the parameters are violated, an error is returned.
+    #[doc(alias = "BrotliEncoderSetParameter")]
     pub fn build(&self) -> Result<BrotliEncoder, ParameterError> {
         let mut encoder = BrotliEncoder::new();
 
