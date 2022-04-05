@@ -1,6 +1,6 @@
 [package]
 name = "brotlic"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["Aron Parker <hl3mukkel@gmail.com>", "The Brotli Authors"]
 description = """
@@ -17,6 +17,19 @@ readme = "README.md"
 
 [dependencies]
 brotlic-sys = { version = "0.1.0", path = "brotlic-sys" }
+
+[dev-dependencies]
+brotli = "3.3.4"
+rand = "0.8.5"
+criterion = "0.3.5"
+rand_pcg = "0.3.1"
+
+[lib]
+bench=false
+
+[[bench]]
+name = "compression"
+harness = false
 
 [workspace]
 members = [ "brotlic-sys" ]

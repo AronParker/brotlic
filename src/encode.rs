@@ -577,7 +577,7 @@ impl<R: BufRead> CompressorReader<R> {
     ///
     /// `into_parts` makes no attempt to validate that the compression stream finished and cannot
     /// fail.
-    pub fn into_parts(mut self) -> (R, BrotliEncoder) {
+    pub fn into_parts(self) -> (R, BrotliEncoder) {
         (self.inner, self.encoder)
     }
 }
@@ -786,5 +786,66 @@ impl fmt::Display for WriterPanicked {
             "CompressorWriter inner writer panicked, what \
             data remains unwritten is not known",
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn valid_stream_offset() {
+        let res = BrotliEncoderOptions::new()
+            .stream_offset(1 << 30)
+            .build();
+
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn invalid_stream_offset() {
+        let res = BrotliEncoderOptions::new()
+            .stream_offset((1 << 30) + 2)
+            .build();
+
+        assert_eq!(res.unwrap_err(), ParameterError::InvalidStreamOffset);
+    }
+
+    #[test]
+    fn valid_postfix_bits() {
+        let res = BrotliEncoderOptions::new()
+            .postfix_bits(3)
+            .build();
+
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn invalid_postfix_bits() {
+        let res = BrotliEncoderOptions::new()
+            .postfix_bits(7)
+            .build();
+
+        assert_eq!(res.unwrap_err(), ParameterError::InvalidPostfix);
+    }
+
+    #[test]
+    fn valid_direct_distance_codes() {
+        let res = BrotliEncoderOptions::new()
+            .postfix_bits(3)
+            .direct_distance_codes(120)
+            .build();
+
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn invalid_direct_distance_codes() {
+        let res = BrotliEncoderOptions::new()
+            .postfix_bits(2)
+            .direct_distance_codes(120)
+            .build();
+
+        assert_eq!(res.unwrap_err(), ParameterError::InvalidDirectDistanceCodes);
     }
 }

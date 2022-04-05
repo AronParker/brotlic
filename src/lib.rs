@@ -68,23 +68,23 @@
 //! To compress and decompress in memory:
 //!
 //! ```
-//! use std::io::{self, Cursor, Read, Write};
+//! use std::io::{self, Read, Write};
 //! use brotlic::{CompressorWriter, DecompressorReader};
 //!
 //! let input = vec![0; 1024];
 //!
 //! // create a wrapper around Write that supports on the fly brotli compression.
-//! let mut compressor = CompressorWriter::new(Cursor::new(Vec::new())); // write to memory
+//! let mut compressor = CompressorWriter::new(Vec::new()); // Vec implements Write
 //! compressor.write_all(input.as_slice());
-//! let encoded_input = compressor.into_inner()?.into_inner(); // read to vec
+//! let compressed_input = compressor.into_inner()?; // read to vec
 //!
 //! // create a wrapper around BufRead that supports on the fly brotli decompression.
-//! let mut decompressed_reader = DecompressorReader::new(Cursor::new(encoded_input));
-//! let mut decoded_input = Vec::new();
+//! let mut decompressor = DecompressorReader::new(compressed_input.as_slice()); // slice is BufRead
+//! let mut decompressed_input = Vec::new();
 //!
-//! decompressed_reader.read_to_end(&mut decoded_input)?;
+//! decompressor.read_to_end(&mut decompressed_input)?;
 //!
-//! assert_eq!(input, decoded_input);
+//! assert_eq!(input, decompressed_input);
 //!
 //! # Ok::<(), io::Error>(())
 //! ```
@@ -94,7 +94,6 @@
 //! Sometimes it can be desirable to trade run-time costs for an even better compression ratio:
 //!
 //! ```
-//! use std::io::Cursor;
 //! use brotlic::{BlockSize, BrotliEncoderOptions, CompressorWriter, Quality, WindowSize};
 //! # use brotlic::ParameterError;
 //!
@@ -104,14 +103,13 @@
 //!     .block_size(BlockSize::best())
 //!     .build()?;
 //!
-//! let writer = Cursor::new(Vec::new());
-//! let compressed_writer = CompressorWriter::with_encoder(encoder, writer);
+//! let compressed_writer = CompressorWriter::with_encoder(encoder, Vec::new());
 //!
 //! # Ok::<(), ParameterError>(())
 //! ```
 //!
 //! It is recommended to not use the encoder directly but instead pass it onto the higher level
-//! abstractions.
+//! abstractions like `CompressorWriter<W>` or `DecompressorReader<R>`.
 
 #![warn(missing_docs)]
 
@@ -847,34 +845,3 @@ impl<I> fmt::Display for IntoInnerError<I> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::io::{Cursor, Read, Write};
-    use super::*;
-    use super::encode::*;
-    use super::decode::*;
-
-    #[test]
-    fn roundtrip() {
-        let input = vec![0; 8192];
-
-        let encoded = {
-            let mut input_stream = Cursor::new(Vec::new());
-            let mut compressed_stream = CompressorWriter::new(input_stream);
-            compressed_stream.write_all(input.as_slice());
-
-            compressed_stream.into_inner().unwrap().into_inner()
-        };
-
-        let decoded = {
-            let mut input_stream = Cursor::new(encoded);
-            let mut decompressed_stream = DecompressorReader::new(input_stream);
-            let mut output = Vec::new();
-
-            decompressed_stream.read_to_end(&mut output).unwrap();
-            output
-        };
-
-        assert_eq!(input, decoded);
-    }
-}
