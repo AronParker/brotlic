@@ -462,6 +462,25 @@ impl<R: BufRead> DecompressorReader<R> {
     }
 
     /// Creates a new `DecompressorReader<R>` with a specified decoder.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brotlic::{BrotliDecoderOptions, DecompressorReader};
+    /// use std::io::Read;
+    ///
+    /// let decoder = BrotliDecoderOptions::new()
+    ///     .disable_ring_buffer_reallocation(true)
+    ///     .build().unwrap();
+    ///
+    /// let source = [11, 2, 128, 104, 101, 108, 108, 111, 3];
+    /// let mut decompressor = DecompressorReader::with_decoder(decoder, source.as_slice());
+    /// let mut str = String::new();
+    ///
+    /// decompressor.read_to_string(&mut str).unwrap();
+    ///
+    /// assert_eq!(str, "hello");
+    /// ```
     pub fn with_decoder(decoder: BrotliDecoder, inner: R) -> Self {
         DecompressorReader { inner, decoder }
     }
@@ -574,6 +593,24 @@ impl<W: Write> DecompressorWriter<W> {
     }
 
     /// Creates a new `DecompressorWriter<W>` with a specified decoder.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::io::Write;
+    /// use brotlic::{BrotliDecoderOptions, DecompressorReader, DecompressorWriter};
+    ///
+    /// let decoder = BrotliDecoderOptions::new()
+    ///     .non_std_window_size_support(true)
+    ///     .build().unwrap();
+    ///
+    /// let mut writer = DecompressorWriter::with_decoder(decoder, Vec::new());
+    /// writer.write_all(&[57]);
+    ///
+    /// let res = writer.into_inner().unwrap();
+    ///
+    /// assert_eq!(res, &[]);
+    /// ```
     pub fn with_decoder(decoder: BrotliDecoder, inner: W) -> Self {
         DecompressorWriter {
             inner,
