@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Aron Parker <hl3mukkel@gmail.com>", "The Brotli Authors"]
 description = """
 Bindings to the brotli library featuring a low-overhead encoder and decoder,
-`Write`rs and `Read`ers for compression and decompression at customizable compression
+io::Write and io::Read wrappers for compression and decompression at customizable compression
 qualities and window sizes.
 """
 license = "MIT OR Apache-2.0"

@@ -135,4 +135,4 @@ library using inputs with different sizes and different amounts of entropy.
 
 ### License
 
-brotlic is dual licensed under the Apache 2.0 license and the MIT license.
+Brotlic is dual licensed under the Apache 2.0 license and the MIT license.
