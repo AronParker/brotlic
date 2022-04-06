@@ -537,6 +537,20 @@ impl<R: BufRead> CompressorReader<R> {
     }
 
     /// Creates a new `CompressorReader<R>` with a specified encoder.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brotlic::{BrotliEncoderOptions, CompressorReader, Quality, WindowSize};
+    ///
+    /// let encoder = BrotliEncoderOptions::new()
+    ///     .quality(Quality::new(6).unwrap())
+    ///     .window_size(WindowSize::new(18).unwrap())
+    ///     .build().unwrap();
+    ///
+    /// let underlying_source = [1, 2, 3, 4, 5];
+    /// let writer = CompressorReader::with_encoder(encoder, underlying_source.as_slice());
+    /// ```
     pub fn with_encoder(encoder: BrotliEncoder, inner: R) -> Self {
         CompressorReader {
             inner,
@@ -663,6 +677,20 @@ impl<W: Write> CompressorWriter<W> {
     }
 
     /// Creates a new `CompressorWriter<W>` with a specified encoder.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brotlic::{BrotliEncoderOptions, CompressorWriter, Quality, WindowSize};
+    ///
+    /// let encoder = BrotliEncoderOptions::new()
+    ///     .quality(Quality::new(4).unwrap())
+    ///     .window_size(WindowSize::new(16).unwrap())
+    ///     .build().unwrap();
+    ///
+    /// let underlying_storage = Vec::new();
+    /// let writer = CompressorWriter::with_encoder(encoder, underlying_storage);
+    /// ```
     pub fn with_encoder(encoder: BrotliEncoder, inner: W) -> Self {
         CompressorWriter {
             inner,
