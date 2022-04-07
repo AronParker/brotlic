@@ -182,6 +182,21 @@ impl BrotliEncoder {
     }
 }
 
+impl Default for BrotliEncoder {
+    fn default() -> Self {
+        BrotliEncoder::new()
+    }
+}
+
+impl Drop for BrotliEncoder {
+    #[doc(alias = "BrotliEncoderDestroyInstance")]
+    fn drop(&mut self) {
+        unsafe {
+            BrotliEncoderDestroyInstance(self.state);
+        }
+    }
+}
+
 /// The operation for the encoder to process.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum BrotliOperation {

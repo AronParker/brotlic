@@ -168,14 +168,35 @@ impl Quality {
 
     /// The highest quality for brotli compression.
     ///
-    /// This quality yields maximum compression ratio at the expense of run-time speed.
+    /// This quality yields maximum compression ratio at the expense of run-time speed. It's
+    /// currently set to 11.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brotlic::Quality;
+    ///
+    /// let best_quality = Quality::new(11).unwrap();
+    ///
+    /// assert_eq!(best_quality, Quality::best());
+    /// ```
     pub fn best() -> Quality {
         Quality(BROTLI_MAX_QUALITY)
     }
 
     /// The default quality to use for brotli compression.
     ///
-    /// This is current set to the best possible quality.
+    /// This is set to the best possible quality 11.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brotlic::Quality;
+    ///
+    /// let default_quality = Quality::new(11).unwrap();
+    ///
+    /// assert_eq!(default_quality, Quality::default());
+    /// ```
     pub fn default() -> Quality {
         Quality(BROTLI_DEFAULT_QUALITY)
     }
@@ -183,6 +204,17 @@ impl Quality {
     /// The worst quality to use for brotli compression.
     ///
     /// This quality yields the worst compression ratio while offering the highest run-time speed.
+    /// It's currently set to 0.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brotlic::Quality;
+    ///
+    /// let worst_quality = Quality::new(0).unwrap();
+    ///
+    /// assert_eq!(worst_quality, Quality::worst());
+    /// ```
     pub fn worst() -> Quality {
         Quality(BROTLI_MIN_QUALITY)
     }
@@ -195,6 +227,20 @@ impl Default for Quality {
     /// [`default`]: Quality::default
     fn default() -> Self {
         Quality::default()
+    }
+}
+
+impl From<Quality> for u8 {
+    fn from(quality: Quality) -> Self {
+        quality.0
+    }
+}
+
+impl TryFrom<u8> for Quality {
+    type Error = ParameterSetError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        Quality::new(value)
     }
 }
 
@@ -211,7 +257,7 @@ impl Default for Quality {
 pub struct WindowSize(u8);
 
 impl WindowSize {
-    /// Consturcts a new sliding window size to use for brotli compression.
+    /// Constructs a new sliding window size to use for brotli compression.
     ///
     /// Valid `bits` range from 10 (1 KiB) to 24 (16 MiB) inclusive.
     ///
@@ -305,6 +351,20 @@ impl Default for WindowSize {
     }
 }
 
+impl From<WindowSize> for u8 {
+    fn from(window_size: WindowSize) -> Self {
+        window_size.0
+    }
+}
+
+impl TryFrom<u8> for WindowSize {
+    type Error = ParameterSetError;
+
+    fn try_from(bits: u8) -> Result<Self, Self::Error> {
+        WindowSize::new(bits)
+    }
+}
+
 impl TryFrom<LargeWindowSize> for WindowSize {
     type Error = ParameterSetError;
 
@@ -333,7 +393,7 @@ impl TryFrom<LargeWindowSize> for WindowSize {
 pub struct LargeWindowSize(u8);
 
 impl LargeWindowSize {
-    /// Consturcts a new large sliding window size (in bits) to use for brotli compression.
+    /// Constructs a new large sliding window size (in bits) to use for brotli compression.
     ///
     /// Valid `bits` range from 10 (1 KiB) to 30 (1 GiB) inclusive.
     ///
@@ -422,6 +482,20 @@ impl Default for LargeWindowSize {
     }
 }
 
+impl From<LargeWindowSize> for u8 {
+    fn from(large_window_size: LargeWindowSize) -> Self {
+        large_window_size.0
+    }
+}
+
+impl TryFrom<u8> for LargeWindowSize {
+    type Error = ParameterSetError;
+
+    fn try_from(bits: u8) -> Result<Self, Self::Error> {
+        LargeWindowSize::new(bits)
+    }
+}
+
 impl From<WindowSize> for LargeWindowSize {
     /// Constructs a [`LargeWindowSize`] from a [`WindowSize`].
     ///
@@ -501,6 +575,20 @@ impl BlockSize {
     /// ```
     pub fn worst() -> BlockSize {
         BlockSize(BROTLI_MIN_INPUT_BLOCK_BITS)
+    }
+}
+
+impl From<BlockSize> for u8 {
+    fn from(block_size: BlockSize) -> Self {
+        block_size.0
+    }
+}
+
+impl TryFrom<u8> for BlockSize {
+    type Error = ParameterSetError;
+
+    fn try_from(bits: u8) -> Result<Self, Self::Error> {
+        BlockSize::new(bits)
     }
 }
 
