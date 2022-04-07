@@ -9,7 +9,6 @@ io::Write and io::Read wrappers for compression and decompression at customizabl
 qualities and window sizes.
 """
 license = "MIT OR Apache-2.0"
-documentation = "https://docs.rs/brotlic/"
 repository = "https://github.com/AronParker/brotlic"
 keywords = ["brotli", "compression", "decompression"]
 categories = ["compression", "api-bindings"]
