@@ -429,10 +429,10 @@ impl From<DecodeError> for io::Error {
 /// Suppose the file `test.brotli` contains brotli compressed data. Let's try to decompress it:
 ///
 /// ```no_run
-/// # use std::fs::File;
-/// # use std::io::{self, Read};
-/// # use brotlic::DecompressorWriter;
-/// #
+/// use std::fs::File;
+/// use std::io::Read;
+/// use brotlic::DecompressorWriter;
+///
 /// let mut input = File::open("test.brotli")?; // test.brotli is brotli compressed
 /// let mut output = String::new();
 ///
@@ -440,7 +440,7 @@ impl From<DecodeError> for io::Error {
 ///
 /// println!("Decompressed text: {}", output);
 ///
-/// # Ok::<(), io::Error>(())
+/// # Ok::<(), std::io::Error>(())
 /// ```
 #[derive(Debug)]
 pub struct DecompressorReader<R: BufRead> {
@@ -471,15 +471,11 @@ impl<R: BufRead> DecompressorReader<R> {
     ///
     /// let decoder = BrotliDecoderOptions::new()
     ///     .disable_ring_buffer_reallocation(true)
-    ///     .build().unwrap();
+    ///     .build()?;
     ///
-    /// let source = [11, 2, 128, 104, 101, 108, 108, 111, 3];
+    /// let source = [11, 2, 128, 104, 101, 108, 108, 111, 3]; // decompresses to "hello"
     /// let mut decompressor = DecompressorReader::with_decoder(decoder, source.as_slice());
-    /// let mut str = String::new();
-    ///
-    /// decompressor.read_to_string(&mut str).unwrap();
-    ///
-    /// assert_eq!(str, "hello");
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
     pub fn with_decoder(decoder: BrotliDecoder, inner: R) -> Self {
         DecompressorReader { inner, decoder }
@@ -557,10 +553,10 @@ impl<R: BufRead> Read for DecompressorReader<R> {
 /// Let's decompress the `test.brotli` file shown in [`CompressorWriter`]:
 ///
 /// ```no_run
-/// # use std::fs::File;
-/// # use std::io;
-/// # use brotlic::DecompressorWriter;
-/// #
+/// use std::fs::File;
+/// use std::io;
+/// use brotlic::DecompressorWriter;
+///
 /// let mut input = File::open("test.brotli")?; // test.brotli is brotli compressed
 /// let mut output = File::create("test_reconstructed.txt")?;
 /// let mut decompressed_output = DecompressorWriter::new(output);
@@ -602,14 +598,10 @@ impl<W: Write> DecompressorWriter<W> {
     ///
     /// let decoder = BrotliDecoderOptions::new()
     ///     .non_std_window_size_support(true)
-    ///     .build().unwrap();
+    ///     .build()?;
     ///
     /// let mut writer = DecompressorWriter::with_decoder(decoder, Vec::new());
-    /// writer.write_all(&[57]);
-    ///
-    /// let res = writer.into_inner().unwrap();
-    ///
-    /// assert_eq!(res, &[]);
+    /// Ok::<(), brotlic::ParameterSetError>(())
     /// ```
     pub fn with_decoder(decoder: BrotliDecoder, inner: W) -> Self {
         DecompressorWriter {

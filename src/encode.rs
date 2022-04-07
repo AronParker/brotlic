@@ -224,8 +224,10 @@ pub enum BrotliOperation {
 ///
 /// let encoder = BrotliEncoderOptions::new()
 ///     .mode(CompressionMode::Text)
-///     .quality(Quality::new(5).unwrap())
-///     .build();
+///     .quality(Quality::new(5)?)
+///     .build()?;
+///
+/// # Ok::<(), brotlic::ParameterSetError>(())
 /// ```
 pub struct BrotliEncoderOptions {
     mode: Option<CompressionMode>,
@@ -500,10 +502,10 @@ impl From<EncodeError> for io::Error {
 /// Suppose the file `test.txt` contains uncompressed text. Let's try to compress it:
 ///
 /// ```no_run
-/// # use std::fs::File;
-/// # use std::io::{self, Read};
-/// # use brotlic::DecompressorWriter;
-/// #
+/// use std::fs::File;
+/// use std::io::Read;
+/// use brotlic::DecompressorWriter;
+///
 /// let mut input = File::open("test.txt")?; // test.brotli is brotli compressed
 /// let mut output = Vec::new();
 ///
@@ -511,7 +513,7 @@ impl From<EncodeError> for io::Error {
 ///
 /// println!("Compressed length: {}", output.len());
 ///
-/// # Ok::<(), io::Error>(())
+/// # Ok::<(), std::io::Error>(())
 /// ```
 ///
 /// [`read`]: CompressorReader::read
@@ -544,12 +546,13 @@ impl<R: BufRead> CompressorReader<R> {
     /// use brotlic::{BrotliEncoderOptions, CompressorReader, Quality, WindowSize};
     ///
     /// let encoder = BrotliEncoderOptions::new()
-    ///     .quality(Quality::new(6).unwrap())
-    ///     .window_size(WindowSize::new(18).unwrap())
-    ///     .build().unwrap();
+    ///     .quality(Quality::new(6)?)
+    ///     .window_size(WindowSize::new(18)?)
+    ///     .build()?;
     ///
     /// let underlying_source = [1, 2, 3, 4, 5];
     /// let writer = CompressorReader::with_encoder(encoder, underlying_source.as_slice());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
     pub fn with_encoder(encoder: BrotliEncoder, inner: R) -> Self {
         CompressorReader {
@@ -637,10 +640,10 @@ impl<R: BufRead> Read for CompressorReader<R> {
 /// Let's compress some text file named `text.txt` and write the output to `test.brotli`:
 ///
 /// ```no_run
-/// # use std::fs::File;
-/// # use std::io;
-/// # use brotlic::CompressorWriter;
-/// #
+/// use std::fs::File;
+/// use std::io;
+/// use brotlic::CompressorWriter;
+///
 /// let mut input = File::open("test.txt")?; // test.txt is uncompressed
 /// let mut output = File::create("test.brotli")?;
 /// let mut compressed_output = CompressorWriter::new(output);
@@ -684,12 +687,13 @@ impl<W: Write> CompressorWriter<W> {
     /// use brotlic::{BrotliEncoderOptions, CompressorWriter, Quality, WindowSize};
     ///
     /// let encoder = BrotliEncoderOptions::new()
-    ///     .quality(Quality::new(4).unwrap())
-    ///     .window_size(WindowSize::new(16).unwrap())
-    ///     .build().unwrap();
+    ///     .quality(Quality::new(4)?)
+    ///     .window_size(WindowSize::new(16)?)
+    ///     .build()?;
     ///
     /// let underlying_storage = Vec::new();
     /// let writer = CompressorWriter::with_encoder(encoder, underlying_storage);
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
     pub fn with_encoder(encoder: BrotliEncoder, inner: W) -> Self {
         CompressorWriter {

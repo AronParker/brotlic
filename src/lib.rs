@@ -95,7 +95,6 @@
 //!
 //! ```
 //! use brotlic::{BlockSize, BrotliEncoderOptions, CompressorWriter, Quality, WindowSize};
-//! # use brotlic::ParameterSetError;
 //!
 //! let encoder = BrotliEncoderOptions::new()
 //!     .quality(Quality::best())
@@ -105,7 +104,7 @@
 //!
 //! let compressed_writer = CompressorWriter::with_encoder(encoder, Vec::new());
 //!
-//! # Ok::<(), ParameterSetError>(())
+//! # Ok::<(), brotlic::ParameterSetError>(())
 //! ```
 //!
 //! It is recommended to not use the encoder directly but instead pass it onto the higher level
@@ -129,6 +128,7 @@ pub use decode::DecompressorWriter;
 use brotlic_sys::*;
 use std::os::raw::c_int;
 use std::{error, fmt, io};
+use std::io::ErrorKind;
 
 /// Quality level of the brotli compression
 ///
@@ -146,24 +146,48 @@ impl Quality {
     ///
     /// # Errors
     ///
-    /// An [`Err`] will be returned if the `value` is out of the range of valid qualities.
+    /// An [`Err`] will be returned if the `level` is out of the range of valid qualities.
     ///
     /// # Examples
     ///
     /// ```
     /// use brotlic::Quality;
     ///
-    /// let worst_quality = Quality::new(0).unwrap();
-    /// let best_quality = Quality::new(11).unwrap();
+    /// let worst_quality = Quality::new(0)?;
+    /// let best_quality = Quality::new(11)?;
     ///
     /// assert_eq!(worst_quality, Quality::worst());
     /// assert_eq!(best_quality, Quality::best());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn new(value: u8) -> Result<Quality, ParameterSetError> {
-        match value {
-            BROTLI_MIN_QUALITY..=BROTLI_MAX_QUALITY => Ok(Quality(value)),
+    pub const fn new(level: u8) -> Result<Quality, ParameterSetError> {
+        match level {
+            BROTLI_MIN_QUALITY..=BROTLI_MAX_QUALITY => Ok(Quality(level)),
             _ => Err(ParameterSetError::InvalidQuality),
         }
+    }
+
+    /// Creates a new brotli compression quality without checking whether the integer represents a
+    /// valid quality. The range of valid qualities is from 0 to 11 inclusive, where 0 is the worst
+    /// possible quality and 11 is the best possible quality. Using any `level` outside of this
+    /// range will result in undefined behaviour.
+    ///
+    /// # Safety
+    ///
+    /// The `level` must be between 0 and 11.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brotlic::Quality;
+    ///
+    /// // SAFETY: 5 is within the range of valid qualities from 0 to 11
+    /// let quality = unsafe { Quality::new_unchecked(5) };
+    ///
+    /// assert_eq!(quality.level(), 5);
+    /// ```
+    pub const unsafe fn new_unchecked(level: u8) -> Quality {
+        Quality(level)
     }
 
     /// The highest quality for brotli compression.
@@ -176,11 +200,12 @@ impl Quality {
     /// ```
     /// use brotlic::Quality;
     ///
-    /// let best_quality = Quality::new(11).unwrap();
+    /// let best_quality = Quality::new(11)?;
     ///
     /// assert_eq!(best_quality, Quality::best());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn best() -> Quality {
+    pub const fn best() -> Quality {
         Quality(BROTLI_MAX_QUALITY)
     }
 
@@ -193,11 +218,12 @@ impl Quality {
     /// ```
     /// use brotlic::Quality;
     ///
-    /// let default_quality = Quality::new(11).unwrap();
+    /// let default_quality = Quality::new(11)?;
     ///
     /// assert_eq!(default_quality, Quality::default());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn default() -> Quality {
+    pub const fn default() -> Quality {
         Quality(BROTLI_DEFAULT_QUALITY)
     }
 
@@ -211,12 +237,29 @@ impl Quality {
     /// ```
     /// use brotlic::Quality;
     ///
-    /// let worst_quality = Quality::new(0).unwrap();
+    /// let worst_quality = Quality::new(0)?;
     ///
     /// assert_eq!(worst_quality, Quality::worst());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn worst() -> Quality {
+    pub const fn worst() -> Quality {
         Quality(BROTLI_MIN_QUALITY)
+    }
+
+    /// Returns an integer representing the quality level.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brotlic::Quality;
+    ///
+    /// let quality = Quality::new(4)?;
+    ///
+    /// assert_eq!(quality.level(), 4);
+    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// ```
+    pub const fn level(&self) -> u8 {
+        self.0
     }
 }
 
@@ -227,20 +270,6 @@ impl Default for Quality {
     /// [`default`]: Quality::default
     fn default() -> Self {
         Quality::default()
-    }
-}
-
-impl From<Quality> for u8 {
-    fn from(quality: Quality) -> Self {
-        quality.0
-    }
-}
-
-impl TryFrom<u8> for Quality {
-    type Error = ParameterSetError;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Quality::new(value)
     }
 }
 
@@ -270,17 +299,41 @@ impl WindowSize {
     /// ```
     /// use brotlic::WindowSize;
     ///
-    /// let worst_size = WindowSize::new(10).unwrap();
-    /// let best_size = WindowSize::new(24).unwrap();
+    /// let worst_size = WindowSize::new(10)?;
+    /// let best_size = WindowSize::new(24)?;
     ///
     /// assert_eq!(worst_size, WindowSize::worst());
     /// assert_eq!(best_size, WindowSize::best());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn new(bits: u8) -> Result<WindowSize, ParameterSetError> {
+    pub const fn new(bits: u8) -> Result<WindowSize, ParameterSetError> {
         match bits {
             BROTLI_MIN_WINDOW_BITS..=BROTLI_MAX_WINDOW_BITS => Ok(WindowSize(bits)),
             _ => Err(ParameterSetError::InvalidWindowSize),
         }
+    }
+
+    /// Constructs a new sliding window size (in bits) to use for brotli compression.
+    ///
+    /// Valid `bits` range from 10 (1 KiB) to 24 (16 MiB) inclusive. Using a number of `bits`
+    /// outside of that range results in undefined behaviour.
+    ///
+    /// # Safety
+    ///
+    /// The number of `bits` must be between 10 and 24.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brotlic::WindowSize;
+    ///
+    /// // SAFETY: 23 is within the valid range of 10 to 24 in window sizes
+    /// let window_size = unsafe { WindowSize::new_unchecked(23) };
+    ///
+    /// assert_eq!(window_size.bits(), 23);
+    /// ```
+    pub const unsafe fn new_unchecked(bits: u8) -> WindowSize {
+        WindowSize(bits)
     }
 
     /// Constructs the best sliding window size to use for brotli compression.
@@ -298,11 +351,12 @@ impl WindowSize {
     /// ```
     /// use brotlic::WindowSize;
     ///
-    /// let best_size = WindowSize::new(24).unwrap();
+    /// let best_size = WindowSize::new(24)?;
     ///
     /// assert_eq!(best_size, WindowSize::best());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn best() -> WindowSize {
+    pub const fn best() -> WindowSize {
         WindowSize(BROTLI_MAX_WINDOW_BITS)
     }
 
@@ -315,11 +369,12 @@ impl WindowSize {
     /// ```
     /// use brotlic::WindowSize;
     ///
-    /// let default_size = WindowSize::new(22).unwrap();
+    /// let default_size = WindowSize::new(22)?;
     ///
     /// assert_eq!(default_size, WindowSize::default());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn default() -> WindowSize {
+    pub const fn default() -> WindowSize {
         WindowSize(BROTLI_DEFAULT_WINDOW)
     }
 
@@ -332,12 +387,29 @@ impl WindowSize {
     /// ```
     /// use brotlic::WindowSize;
     ///
-    /// let worst_size = WindowSize::new(10).unwrap();
+    /// let worst_size = WindowSize::new(10)?;
     ///
     /// assert_eq!(worst_size, WindowSize::worst());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn worst() -> WindowSize {
+    pub const fn worst() -> WindowSize {
         WindowSize(BROTLI_MIN_WINDOW_BITS)
+    }
+
+    /// Returns an integer representing the window size in bits.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brotlic::WindowSize;
+    ///
+    /// let window_size = WindowSize::new(24)?;
+    ///
+    /// assert_eq!(window_size.bits(), 24);
+    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// ```
+    pub const fn bits(&self) -> u8 {
+        self.0
     }
 }
 
@@ -348,20 +420,6 @@ impl Default for WindowSize {
     /// [`default`]: WindowSize::default()
     fn default() -> Self {
         WindowSize::default()
-    }
-}
-
-impl From<WindowSize> for u8 {
-    fn from(window_size: WindowSize) -> Self {
-        window_size.0
-    }
-}
-
-impl TryFrom<u8> for WindowSize {
-    type Error = ParameterSetError;
-
-    fn try_from(bits: u8) -> Result<Self, Self::Error> {
-        WindowSize::new(bits)
     }
 }
 
@@ -406,17 +464,41 @@ impl LargeWindowSize {
     /// ```
     /// use brotlic::LargeWindowSize;
     ///
-    /// let worst_size = LargeWindowSize::new(10).unwrap();
-    /// let best_size = LargeWindowSize::new(30).unwrap();
+    /// let worst_size = LargeWindowSize::new(10)?;
+    /// let best_size = LargeWindowSize::new(30)?;
     ///
     /// assert_eq!(worst_size, LargeWindowSize::worst());
     /// assert_eq!(best_size, LargeWindowSize::best());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn new(bits: u8) -> Result<LargeWindowSize, ParameterSetError> {
+    pub const fn new(bits: u8) -> Result<LargeWindowSize, ParameterSetError> {
         match bits {
             BROTLI_MIN_WINDOW_BITS..=BROTLI_LARGE_MAX_WINDOW_BITS => Ok(LargeWindowSize(bits)),
             _ => Err(ParameterSetError::InvalidWindowSize),
         }
+    }
+
+    /// Constructs a new large sliding window size (in bits) to use for brotli compression.
+    ///
+    /// Valid `bits` range from 10 (1 KiB) to 30 (1 GiB) inclusive. Using a number of `bits` outside
+    /// of that range results in undefined behaviour.
+    ///
+    /// # Safety
+    ///
+    /// The number of `bits` must be between 10 and 30.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brotlic::LargeWindowSize;
+    ///
+    /// // SAFETY: 28 is within the valid range of 10 to 30 in large window sizes
+    /// let window_size = unsafe { LargeWindowSize::new_unchecked(28) };
+    ///
+    /// assert_eq!(window_size.bits(), 28);
+    /// ```
+    pub const unsafe fn new_unchecked(bits: u8) -> LargeWindowSize {
+        LargeWindowSize(bits)
     }
 
     /// Constructs the best large sliding window size to use for brotli compression.
@@ -429,11 +511,12 @@ impl LargeWindowSize {
     /// ```
     /// use brotlic::LargeWindowSize;
     ///
-    /// let best_size = LargeWindowSize::new(30).unwrap();
+    /// let best_size = LargeWindowSize::new(30)?;
     ///
     /// assert_eq!(best_size, LargeWindowSize::best());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn best() -> LargeWindowSize {
+    pub const fn best() -> LargeWindowSize {
         LargeWindowSize(BROTLI_LARGE_MAX_WINDOW_BITS)
     }
 
@@ -446,11 +529,12 @@ impl LargeWindowSize {
     /// ```
     /// use brotlic::LargeWindowSize;
     ///
-    /// let default_size = LargeWindowSize::new(22).unwrap();
+    /// let default_size = LargeWindowSize::new(22)?;
     ///
     /// assert_eq!(default_size, LargeWindowSize::default());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn default() -> LargeWindowSize {
+    pub const fn default() -> LargeWindowSize {
         LargeWindowSize(BROTLI_DEFAULT_WINDOW)
     }
 
@@ -463,12 +547,29 @@ impl LargeWindowSize {
     /// ```
     /// use brotlic::LargeWindowSize;
     ///
-    /// let worst_size = LargeWindowSize::new(10).unwrap();
+    /// let worst_size = LargeWindowSize::new(10)?;
     ///
     /// assert_eq!(worst_size, LargeWindowSize::worst());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn worst() -> LargeWindowSize {
+    pub const fn worst() -> LargeWindowSize {
         LargeWindowSize(BROTLI_MIN_WINDOW_BITS)
+    }
+
+    /// Returns an integer representing the large window size in bits.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brotlic::LargeWindowSize;
+    ///
+    /// let window_size = LargeWindowSize::new(28)?;
+    ///
+    /// assert_eq!(window_size.bits(), 28);
+    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// ```
+    pub const fn bits(&self) -> u8 {
+        self.0
     }
 }
 
@@ -479,20 +580,6 @@ impl Default for LargeWindowSize {
     /// [`default`]: LargeWindowSize::default()
     fn default() -> Self {
         LargeWindowSize::default()
-    }
-}
-
-impl From<LargeWindowSize> for u8 {
-    fn from(large_window_size: LargeWindowSize) -> Self {
-        large_window_size.0
-    }
-}
-
-impl TryFrom<u8> for LargeWindowSize {
-    type Error = ParameterSetError;
-
-    fn try_from(bits: u8) -> Result<Self, Self::Error> {
-        LargeWindowSize::new(bits)
     }
 }
 
@@ -528,17 +615,40 @@ impl BlockSize {
     /// ```
     /// use brotlic::BlockSize;
     ///
-    /// let worst_size = BlockSize::new(16).unwrap();
-    /// let best_size = BlockSize::new(24).unwrap();
+    /// let worst_size = BlockSize::new(16)?;
+    /// let best_size = BlockSize::new(24)?;
     ///
     /// assert_eq!(worst_size, BlockSize::worst());
     /// assert_eq!(best_size, BlockSize::best());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn new(bits: u8) -> Result<BlockSize, ParameterSetError> {
+    pub const fn new(bits: u8) -> Result<BlockSize, ParameterSetError> {
         match bits {
             BROTLI_MIN_INPUT_BLOCK_BITS..=BROTLI_MAX_INPUT_BLOCK_BITS => Ok(BlockSize(bits)),
             _ => Err(ParameterSetError::InvalidBlockSize),
         }
+    }
+
+    /// Constructs a new block size (in bits) to use for brotli compression.
+    ///
+    /// Valid `bits` range from 16 to 24 inclusive. Using any number of bits outside of that range
+    /// results in undefined behaviour.
+    ///
+    /// # Safety
+    ///
+    /// The number of `bits` must be between 16 and 24.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brotlic::BlockSize;
+    ///
+    /// let block_size = unsafe{ BlockSize::new_unchecked(22) };
+    ///
+    /// assert_eq!(block_size.bits(), 22);
+    /// ```
+    pub const fn new_unchecked(bits: u8) -> BlockSize {
+        BlockSize(bits)
     }
 
     /// Constructs the best block size (in bits) to use for brotli compression.
@@ -551,9 +661,10 @@ impl BlockSize {
     /// ```
     /// use brotlic::BlockSize;
     ///
-    /// let best_size = BlockSize::new(24).unwrap();
+    /// let best_size = BlockSize::new(24)?;
     ///
     /// assert_eq!(best_size, BlockSize::best());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
     pub fn best() -> BlockSize {
         BlockSize(BROTLI_MAX_INPUT_BLOCK_BITS)
@@ -569,26 +680,29 @@ impl BlockSize {
     /// ```
     /// use brotlic::BlockSize;
     ///
-    /// let worst_size = BlockSize::new(16).unwrap();
+    /// let worst_size = BlockSize::new(16)?;
     ///
     /// assert_eq!(worst_size, BlockSize::worst());
+    /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
     pub fn worst() -> BlockSize {
         BlockSize(BROTLI_MIN_INPUT_BLOCK_BITS)
     }
-}
 
-impl From<BlockSize> for u8 {
-    fn from(block_size: BlockSize) -> Self {
-        block_size.0
-    }
-}
-
-impl TryFrom<u8> for BlockSize {
-    type Error = ParameterSetError;
-
-    fn try_from(bits: u8) -> Result<Self, Self::Error> {
-        BlockSize::new(bits)
+    /// Returns an integer representing the block size in bits.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use brotlic::BlockSize;
+    ///
+    /// let block_size = BlockSize::new(23)?;
+    ///
+    /// assert_eq!(block_size.bits(), 23);
+    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// ```
+    pub const fn bits(&self) -> u8 {
+        self.0
     }
 }
 
@@ -627,6 +741,12 @@ impl fmt::Display for CompressError {
 
 impl error::Error for CompressError {}
 
+impl From<CompressError> for io::Error {
+    fn from(err: CompressError) -> Self {
+        io::Error::new(ErrorKind::Other, err)
+    }
+}
+
 /// a specialized [`Result`] type returned by [`compress`].
 pub type CompressionResult<T> = Result<T, CompressError>;
 
@@ -641,6 +761,12 @@ impl fmt::Display for DecompressError {
 }
 
 impl error::Error for DecompressError {}
+
+impl From<DecompressError> for io::Error {
+    fn from(err: DecompressError) -> Self {
+        io::Error::new(ErrorKind::Other, err)
+    }
+}
 
 /// a specialized [`Result`] type returned by [`decompress`].
 pub type DecompressionResult<T> = Result<T, DecompressError>;
@@ -731,9 +857,10 @@ impl error::Error for ParameterSetError {}
 ///      Quality::default(),
 ///      WindowSize::default(),
 ///      CompressionMode::Generic
-/// ).unwrap();
+/// )?;
 ///
 /// assert!(bytes_written < input.len());
+/// # Ok::<(), brotlic::CompressError>(())
 /// ```
 #[doc(alias = "BrotliEncoderCompress")]
 pub fn compress(
@@ -808,13 +935,14 @@ pub fn compress_bound(input_size: usize, quality: Quality) -> Option<usize> {
 ///      Quality::default(),
 ///      WindowSize::default(),
 ///      CompressionMode::Generic
-/// ).unwrap();
+/// )?;
 ///
 /// let encoded = &encoded[..bytes_written];
-/// let bytes_written = decompress(encoded, decoded.as_mut_slice()).unwrap();
+/// let bytes_written = decompress(encoded, decoded.as_mut_slice())?;
 /// let decoded = &decoded[..bytes_written];
 ///
 /// assert_eq!(input, decoded);
+/// # Ok::<(), std::io::Error>(())
 /// ```
 #[doc(alias = "BrotliDecoderDecompress")]
 pub fn decompress(input: &[u8], output: &mut [u8]) -> DecompressionResult<usize> {
