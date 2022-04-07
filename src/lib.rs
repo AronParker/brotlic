@@ -95,7 +95,7 @@
 //!
 //! ```
 //! use brotlic::{BlockSize, BrotliEncoderOptions, CompressorWriter, Quality, WindowSize};
-//! # use brotlic::ParameterError;
+//! # use brotlic::ParameterSetError;
 //!
 //! let encoder = BrotliEncoderOptions::new()
 //!     .quality(Quality::best())
@@ -105,7 +105,7 @@
 //!
 //! let compressed_writer = CompressorWriter::with_encoder(encoder, Vec::new());
 //!
-//! # Ok::<(), ParameterError>(())
+//! # Ok::<(), ParameterSetError>(())
 //! ```
 //!
 //! It is recommended to not use the encoder directly but instead pass it onto the higher level
@@ -159,10 +159,10 @@ impl Quality {
     /// assert_eq!(worst_quality, Quality::worst());
     /// assert_eq!(best_quality, Quality::best());
     /// ```
-    pub fn new(value: u8) -> Result<Quality, QualityError> {
+    pub fn new(value: u8) -> Result<Quality, ParameterSetError> {
         match value {
             BROTLI_MIN_QUALITY..=BROTLI_MAX_QUALITY => Ok(Quality(value)),
-            _ => Err(QualityError),
+            _ => Err(ParameterSetError::InvalidQuality),
         }
     }
 
@@ -198,22 +198,6 @@ impl Default for Quality {
     }
 }
 
-/// An error returned by [`Quality::new`].
-#[derive(Debug)]
-pub struct QualityError;
-
-impl fmt::Display for QualityError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "quality out of range (must be between {} and {} inclusive)",
-            BROTLI_MIN_QUALITY, BROTLI_MAX_QUALITY
-        )
-    }
-}
-
-impl error::Error for QualityError {}
-
 /// The sliding window size (in bits) to use for compression.
 ///
 /// Its maximum size is currently limited to 16 MiB, as specified in RFC7932 (Brotli proper).
@@ -246,10 +230,10 @@ impl WindowSize {
     /// assert_eq!(worst_size, WindowSize::worst());
     /// assert_eq!(best_size, WindowSize::best());
     /// ```
-    pub fn new(bits: u8) -> Result<WindowSize, WindowSizeError> {
+    pub fn new(bits: u8) -> Result<WindowSize, ParameterSetError> {
         match bits {
             BROTLI_MIN_WINDOW_BITS..=BROTLI_MAX_WINDOW_BITS => Ok(WindowSize(bits)),
-            _ => Err(WindowSizeError),
+            _ => Err(ParameterSetError::InvalidWindowSize),
         }
     }
 
@@ -322,7 +306,7 @@ impl Default for WindowSize {
 }
 
 impl TryFrom<LargeWindowSize> for WindowSize {
-    type Error = WindowSizeError;
+    type Error = ParameterSetError;
 
     /// Attempts to construct a [`WindowSize`] from a [`LargeWindowSize`].
     ///
@@ -336,22 +320,6 @@ impl TryFrom<LargeWindowSize> for WindowSize {
         WindowSize::new(large_window_size.0)
     }
 }
-
-/// An error returned by [`WindowSize::new`].
-#[derive(Debug)]
-pub struct WindowSizeError;
-
-impl fmt::Display for WindowSizeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "window size out of range (must be between {} and {} inclusive)",
-            BROTLI_MIN_WINDOW_BITS, BROTLI_MAX_WINDOW_BITS
-        )
-    }
-}
-
-impl error::Error for WindowSizeError {}
 
 /// The large sliding window size (in bits) to use for compression.
 ///
@@ -384,10 +352,10 @@ impl LargeWindowSize {
     /// assert_eq!(worst_size, LargeWindowSize::worst());
     /// assert_eq!(best_size, LargeWindowSize::best());
     /// ```
-    pub fn new(bits: u8) -> Result<LargeWindowSize, LargeWindowSizeError> {
+    pub fn new(bits: u8) -> Result<LargeWindowSize, ParameterSetError> {
         match bits {
             BROTLI_MIN_WINDOW_BITS..=BROTLI_LARGE_MAX_WINDOW_BITS => Ok(LargeWindowSize(bits)),
-            _ => Err(LargeWindowSizeError),
+            _ => Err(ParameterSetError::InvalidWindowSize),
         }
     }
 
@@ -464,22 +432,6 @@ impl From<WindowSize> for LargeWindowSize {
     }
 }
 
-/// An error returned by [`LargeWindowSize::new`].
-#[derive(Debug)]
-pub struct LargeWindowSizeError;
-
-impl fmt::Display for LargeWindowSizeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "large window size out of range (must be between {} and {} inclusive)",
-            BROTLI_MIN_WINDOW_BITS, BROTLI_LARGE_MAX_WINDOW_BITS
-        )
-    }
-}
-
-impl error::Error for LargeWindowSizeError {}
-
 /// The recommended input block size (in bits) to use for compression.
 ///
 /// The compressor may reduce this value at its leisure, for example when the input size is small.
@@ -508,10 +460,10 @@ impl BlockSize {
     /// assert_eq!(worst_size, BlockSize::worst());
     /// assert_eq!(best_size, BlockSize::best());
     /// ```
-    pub fn new(bits: u8) -> Result<BlockSize, BlockSizeError> {
+    pub fn new(bits: u8) -> Result<BlockSize, ParameterSetError> {
         match bits {
             BROTLI_MIN_INPUT_BLOCK_BITS..=BROTLI_MAX_INPUT_BLOCK_BITS => Ok(BlockSize(bits)),
-            _ => Err(BlockSizeError),
+            _ => Err(ParameterSetError::InvalidBlockSize),
         }
     }
 
@@ -552,22 +504,6 @@ impl BlockSize {
     }
 }
 
-/// An error returned by [`BlockSize::new`].
-#[derive(Debug)]
-pub struct BlockSizeError;
-
-impl fmt::Display for BlockSizeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "block size out of range (must be between {} and {} inclusive)",
-            BROTLI_MIN_INPUT_BLOCK_BITS, BROTLI_MAX_INPUT_BLOCK_BITS
-        )
-    }
-}
-
-impl error::Error for BlockSizeError {}
-
 /// Allows to tune a brotli compressor for a specific type of input.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum CompressionMode {
@@ -593,40 +529,41 @@ impl Default for CompressionMode {
 
 /// An error returned by [`compress`].
 #[derive(Debug)]
-pub struct CompressionError;
+pub struct CompressError;
 
-impl fmt::Display for CompressionError {
+impl fmt::Display for CompressError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("buffer was too small or compression error occurred")
     }
 }
 
-impl error::Error for CompressionError {}
+impl error::Error for CompressError {}
 
 /// a specialized [`Result`] type returned by [`compress`].
-pub type CompressionResult<T> = Result<T, CompressionError>;
+pub type CompressionResult<T> = Result<T, CompressError>;
 
 /// An error returned by [`decompress`].
 #[derive(Debug)]
-pub struct DecompressionError;
+pub struct DecompressError;
 
-impl fmt::Display for DecompressionError {
+impl fmt::Display for DecompressError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("buffer was too small or decompression error occurred")
     }
 }
 
-impl error::Error for DecompressionError {}
+impl error::Error for DecompressError {}
 
 /// a specialized [`Result`] type returned by [`decompress`].
-pub type DecompressionResult<T> = Result<T, DecompressionError>;
+pub type DecompressionResult<T> = Result<T, DecompressError>;
 
 /// An error returned by [`BrotliEncoderOptions::build`] and [`BrotliDecoderOptions::build`]
 ///
 /// [`BrotliEncoderOptions::build`]: encode::BrotliEncoderOptions::build
 /// [`BrotliDecoderOptions::build`]: decode::BrotliDecoderOptions::build
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum ParameterError {
+#[non_exhaustive]
+pub enum ParameterSetError {
     /// The encoder or decoder returned an error.
     ///
     /// This error originates from `BrotliEncoderSetParameter` or `BrotliDecoderSetParameter` being
@@ -641,24 +578,39 @@ pub enum ParameterError {
 
     /// The stream offset was beyond its maximum offset.
     InvalidStreamOffset,
+
+    /// The quality was out of range.
+    InvalidQuality,
+
+    /// sliding window size bits were out of range.
+    InvalidWindowSize,
+
+    /// Block size bits were out of range.
+    InvalidBlockSize,
 }
 
-impl fmt::Display for ParameterError {
+impl fmt::Display for ParameterSetError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParameterError::Generic =>
+            ParameterSetError::Generic =>
                 f.write_str("invalid parameter"),
-            ParameterError::InvalidPostfix =>
+            ParameterSetError::InvalidPostfix =>
                 f.write_str("invalid number of postfix bits"),
-            ParameterError::InvalidDirectDistanceCodes =>
+            ParameterSetError::InvalidDirectDistanceCodes =>
                 f.write_str("invalid number of direct distance codes"),
-            ParameterError::InvalidStreamOffset =>
+            ParameterSetError::InvalidStreamOffset =>
                 f.write_str("stream offset was out of range"),
+            ParameterSetError::InvalidQuality =>
+                f.write_str("quality out of range"),
+            ParameterSetError::InvalidWindowSize =>
+                f.write_str("window size out of range"),
+            ParameterSetError::InvalidBlockSize =>
+                f.write_str("block size out of range"),
         }
     }
 }
 
-impl error::Error for ParameterError {}
+impl error::Error for ParameterSetError {}
 
 /// Read all bytes from `input` and compress them into `output`, returning how many bytes were
 /// written.
@@ -720,7 +672,7 @@ pub fn compress(
     if res != 0 {
         Ok(output_size)
     } else {
-        Err(CompressionError)
+        Err(CompressError)
     }
 }
 
@@ -792,7 +744,7 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> DecompressionResult<usize>
     if res == BrotliDecoderResult_BROTLI_DECODER_RESULT_SUCCESS {
         Ok(output_size)
     } else {
-        Err(DecompressionError)
+        Err(DecompressError)
     }
 }
 

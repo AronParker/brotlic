@@ -12,7 +12,7 @@ use std::{error, fmt, io, ptr, slice};
 
 use brotlic_sys::*;
 
-use crate::{IntoInnerError, ParameterError};
+use crate::{IntoInnerError, ParameterSetError};
 
 /// A reference to a brotli decoder.
 ///
@@ -66,7 +66,7 @@ impl BrotliDecoder {
         &mut self,
         input: &[u8],
         output: &mut [u8],
-    ) -> Result<DecoderResult, DecoderError> {
+    ) -> Result<DecoderResult, DecodeError> {
         let mut input_ptr = input.as_ptr();
         let mut input_len = input.len();
         let mut output_ptr = output.as_mut_ptr();
@@ -103,7 +103,7 @@ impl BrotliDecoder {
     }
 
     /// Convience function to call method [`Self::decompress`] with only input.
-    pub fn give_input(&mut self, input: &[u8]) -> Result<(usize, DecoderInfo), DecoderError> {
+    pub fn give_input(&mut self, input: &[u8]) -> Result<(usize, DecoderInfo), DecodeError> {
         let res = self.decompress(input, &mut [])?;
 
         Ok((res.bytes_read, res.info))
@@ -143,94 +143,94 @@ impl BrotliDecoder {
         &mut self,
         param: BrotliDecoderParameter,
         value: u32,
-    ) -> Result<(), ParameterError> {
+    ) -> Result<(), ParameterSetError> {
         let r = unsafe { BrotliDecoderSetParameter(self.state, param, value) };
 
-        if r != 0 { Ok(()) } else { Err(ParameterError::Generic) }
+        if r != 0 { Ok(()) } else { Err(ParameterSetError::Generic) }
     }
 
-    fn last_error(&self) -> DecoderError {
+    fn last_error(&self) -> DecodeError {
         let ec = unsafe { BrotliDecoderGetErrorCode(self.state) };
 
         #[allow(non_upper_case_globals)]
         match ec {
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_EXUBERANT_NIBBLE => {
-                DecoderError::FormatExuberantNibble
+                DecodeError::FormatExuberantNibble
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_RESERVED => {
-                DecoderError::FormatReserved
+                DecodeError::FormatReserved
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_EXUBERANT_META_NIBBLE => {
-                DecoderError::FormatExuberantMetaNibble
+                DecodeError::FormatExuberantMetaNibble
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_SIMPLE_HUFFMAN_ALPHABET => {
-                DecoderError::FormatSimpleHuffmanAlphabet
+                DecodeError::FormatSimpleHuffmanAlphabet
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_SIMPLE_HUFFMAN_SAME => {
-                DecoderError::FormatSimpleHuffmanSame
+                DecodeError::FormatSimpleHuffmanSame
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_CL_SPACE => {
-                DecoderError::FormatClSpace
+                DecodeError::FormatClSpace
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_HUFFMAN_SPACE => {
-                DecoderError::FormatHuffmanSpace
+                DecodeError::FormatHuffmanSpace
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_CONTEXT_MAP_REPEAT => {
-                DecoderError::FormatContextMapRepeat
+                DecodeError::FormatContextMapRepeat
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_BLOCK_LENGTH_1 => {
-                DecoderError::FormatBlockLength1
+                DecodeError::FormatBlockLength1
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_BLOCK_LENGTH_2 => {
-                DecoderError::FormatBlockLength2
+                DecodeError::FormatBlockLength2
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_TRANSFORM => {
-                DecoderError::FormatTransform
+                DecodeError::FormatTransform
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_DICTIONARY => {
-                DecoderError::FormatDictionary
+                DecodeError::FormatDictionary
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_WINDOW_BITS => {
-                DecoderError::FormatWindowBits
+                DecodeError::FormatWindowBits
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_PADDING_1 => {
-                DecoderError::FormatPadding1
+                DecodeError::FormatPadding1
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_PADDING_2 => {
-                DecoderError::FormatPadding2
+                DecodeError::FormatPadding2
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_DISTANCE => {
-                DecoderError::FormatDistance
+                DecodeError::FormatDistance
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_COMPOUND_DICTIONARY => {
-                DecoderError::CompoundDictionary
+                DecodeError::CompoundDictionary
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_DICTIONARY_NOT_SET => {
-                DecoderError::DictionaryNotSet
+                DecodeError::DictionaryNotSet
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_INVALID_ARGUMENTS => {
-                DecoderError::InvalidArguments
+                DecodeError::InvalidArguments
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_ALLOC_CONTEXT_MODES => {
-                DecoderError::AllocContextModes
+                DecodeError::AllocContextModes
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_ALLOC_TREE_GROUPS => {
-                DecoderError::AllocTreeGroups
+                DecodeError::AllocTreeGroups
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_ALLOC_CONTEXT_MAP => {
-                DecoderError::AllocContextMap
+                DecodeError::AllocContextMap
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_ALLOC_RING_BUFFER_1 => {
-                DecoderError::AllocRingBuffer1
+                DecodeError::AllocRingBuffer1
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_ALLOC_RING_BUFFER_2 => {
-                DecoderError::AllocRingBuffer2
+                DecodeError::AllocRingBuffer2
             }
             BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_ALLOC_BLOCK_TYPE_TREES => {
-                DecoderError::AllocBlockTypeTrees
+                DecodeError::AllocBlockTypeTrees
             }
-            BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_UNREACHABLE => DecoderError::Unreachable,
-            _ => DecoderError::UnknownError,
+            BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_UNREACHABLE => DecodeError::Unreachable,
+            _ => DecodeError::UnknownError,
         }
     }
 }
@@ -306,7 +306,7 @@ impl BrotliDecoderOptions {
     ///
     /// If any of the preconditions of the parameters are violated, an error is returned.
     #[doc(alias = "BrotliDecoderSetParameter")]
-    pub fn build(&self) -> Result<BrotliDecoder, ParameterError> {
+    pub fn build(&self) -> Result<BrotliDecoder, ParameterSetError> {
         let mut decoder = BrotliDecoder::new();
 
         if let Some(disable_ring_buffer_reallocation) = self.disable_ring_buffer_reallocation {
@@ -359,7 +359,7 @@ pub enum DecoderInfo {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[non_exhaustive]
 #[allow(missing_docs)]
-pub enum DecoderError {
+pub enum DecodeError {
     UnknownError = 0,
     FormatExuberantNibble =
     BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_EXUBERANT_NIBBLE as isize,
@@ -395,11 +395,11 @@ pub enum DecoderError {
     Unreachable = BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_UNREACHABLE as isize,
 }
 
-impl error::Error for DecoderError {}
+impl error::Error for DecodeError {}
 
-impl fmt::Display for DecoderError {
+impl fmt::Display for DecodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if *self == DecoderError::UnknownError {
+        if *self == DecodeError::UnknownError {
             write!(f, "decode error: unknown error")
         } else {
             let str = unsafe {
@@ -416,8 +416,8 @@ impl fmt::Display for DecoderError {
     }
 }
 
-impl From<DecoderError> for io::Error {
-    fn from(err: DecoderError) -> Self {
+impl From<DecodeError> for io::Error {
+    fn from(err: DecodeError) -> Self {
         io::Error::new(io::ErrorKind::Other, err)
     }
 }

@@ -6,7 +6,7 @@
 //! [`Write`]: https://doc.rust-lang.org/stable/std/io/trait.Write.html
 
 use crate::{
-    BlockSize, CompressionMode, IntoInnerError, LargeWindowSize, ParameterError, Quality,
+    BlockSize, CompressionMode, IntoInnerError, LargeWindowSize, ParameterSetError, Quality,
     WindowSize,
 };
 use brotlic_sys::*;
@@ -77,7 +77,7 @@ impl BrotliEncoder {
         input: &[u8],
         output: &mut [u8],
         op: BrotliOperation,
-    ) -> Result<EncoderResult, EncoderError> {
+    ) -> Result<EncoderResult, EncodeError> {
         let mut input_ptr = input.as_ptr();
         let mut input_len = input.len();
         let mut output_ptr = output.as_mut_ptr();
@@ -101,12 +101,12 @@ impl BrotliEncoder {
 
             Ok(EncoderResult { bytes_read, bytes_written })
         } else {
-            Err(EncoderError)
+            Err(EncodeError)
         }
     }
 
     /// Convience function to call method [`Self::compress`] with only input and no output.
-    pub fn give_input(&mut self, input: &[u8], op: BrotliOperation) -> Result<usize, EncoderError> {
+    pub fn give_input(&mut self, input: &[u8], op: BrotliOperation) -> Result<usize, EncodeError> {
         Ok(self.compress(input, &mut [], op)?.bytes_read)
     }
 
@@ -117,7 +117,7 @@ impl BrotliEncoder {
     /// queried before flushing has been finalized. When flush is complete, output data will be
     /// sufficient for a decoder to reproduce all given input. Calling this function might resulting
     /// in a worse compression ratio, because the encoder is forced to emit all output immediately.
-    pub fn flush(&mut self) -> Result<(), EncoderError> {
+    pub fn flush(&mut self) -> Result<(), EncodeError> {
         self.give_op(BrotliOperation::Flush)
     }
 
@@ -128,7 +128,7 @@ impl BrotliEncoder {
     /// encoder is finished. Once this method has been called, no further input should be processed.
     ///
     /// For more information, see `BrotliEncoderOperation::BROTLI_OPERATION_FINISH`
-    pub fn finish(&mut self) -> Result<(), EncoderError> {
+    pub fn finish(&mut self) -> Result<(), EncodeError> {
         self.give_op(BrotliOperation::Finish)
     }
 
@@ -170,13 +170,13 @@ impl BrotliEncoder {
         &mut self,
         param: BrotliEncoderParameter,
         value: u32,
-    ) -> Result<(), ParameterError> {
+    ) -> Result<(), ParameterSetError> {
         let r = unsafe { BrotliEncoderSetParameter(self.state, param, value) };
 
-        if r != 0 { Ok(()) } else { Err(ParameterError::Generic) }
+        if r != 0 { Ok(()) } else { Err(ParameterSetError::Generic) }
     }
 
-    fn give_op(&mut self, op: BrotliOperation) -> Result<(), EncoderError> {
+    fn give_op(&mut self, op: BrotliOperation) -> Result<(), EncodeError> {
         self.give_input(&[], op)?;
         Ok(())
     }
@@ -197,21 +197,6 @@ pub enum BrotliOperation {
     /// operation is initiated, to keep submitting flush operations till the encoder has no more
     /// output available. Additionally, the input stream should not be swapped, reduced or extended.
     Finish = BrotliEncoderOperation_BROTLI_OPERATION_FINISH as isize,
-}
-
-impl Default for BrotliEncoder {
-    fn default() -> Self {
-        BrotliEncoder::new()
-    }
-}
-
-impl Drop for BrotliEncoder {
-    #[doc(alias = "BrotliEncoderDestroyInstance")]
-    fn drop(&mut self) {
-        unsafe {
-            BrotliEncoderDestroyInstance(self.state);
-        }
-    }
 }
 
 /// Compression options to be used for a [`BrotliEncoder`].
@@ -363,7 +348,7 @@ impl BrotliEncoderOptions {
     ///
     /// If any of the preconditions of the parameters are violated, an error is returned.
     #[doc(alias = "BrotliEncoderSetParameter")]
-    pub fn build(&self) -> Result<BrotliEncoder, ParameterError> {
+    pub fn build(&self) -> Result<BrotliEncoder, ParameterSetError> {
         let mut encoder = BrotliEncoder::new();
 
         if let Some(mode) = self.mode {
@@ -417,7 +402,7 @@ impl BrotliEncoderOptions {
 
         if let Some(postfix_bits) = self.postfix_bits {
             if postfix_bits > 3 {
-                return Err(ParameterError::InvalidPostfix);
+                return Err(ParameterSetError::InvalidPostfix);
             }
 
             let key = BrotliEncoderParameter_BROTLI_PARAM_NPOSTFIX;
@@ -431,7 +416,7 @@ impl BrotliEncoderOptions {
 
             if (direct_distance_codes > (15 << postfix)) ||
                 (direct_distance_codes & ((1 << postfix) - 1)) != 0 {
-                return Err(ParameterError::InvalidDirectDistanceCodes);
+                return Err(ParameterSetError::InvalidDirectDistanceCodes);
             }
 
             let key = BrotliEncoderParameter_BROTLI_PARAM_NDIRECT;
@@ -442,7 +427,7 @@ impl BrotliEncoderOptions {
 
         if let Some(stream_offset) = self.stream_offset {
             if stream_offset > (1 << 30) {
-                return Err(ParameterError::InvalidStreamOffset);
+                return Err(ParameterSetError::InvalidStreamOffset);
             }
 
             let key = BrotliEncoderParameter_BROTLI_PARAM_STREAM_OFFSET;
@@ -472,18 +457,18 @@ pub struct EncoderResult {
 
 /// An error returned by [`BrotliEncoder::compress`].
 #[derive(Debug)]
-pub struct EncoderError;
+pub struct EncodeError;
 
-impl error::Error for EncoderError {}
+impl error::Error for EncodeError {}
 
-impl fmt::Display for EncoderError {
+impl fmt::Display for EncodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("brotli encoder error")
     }
 }
 
-impl From<EncoderError> for io::Error {
-    fn from(err: EncoderError) -> Self {
+impl From<EncodeError> for io::Error {
+    fn from(err: EncodeError) -> Self {
         io::Error::new(io::ErrorKind::Other, err)
     }
 }
@@ -836,7 +821,7 @@ mod tests {
             .stream_offset((1 << 30) + 2)
             .build();
 
-        assert_eq!(res.unwrap_err(), ParameterError::InvalidStreamOffset);
+        assert_eq!(res.unwrap_err(), ParameterSetError::InvalidStreamOffset);
     }
 
     #[test]
@@ -854,7 +839,7 @@ mod tests {
             .postfix_bits(7)
             .build();
 
-        assert_eq!(res.unwrap_err(), ParameterError::InvalidPostfix);
+        assert_eq!(res.unwrap_err(), ParameterSetError::InvalidPostfix);
     }
 
     #[test]
@@ -874,6 +859,6 @@ mod tests {
             .direct_distance_codes(120)
             .build();
 
-        assert_eq!(res.unwrap_err(), ParameterError::InvalidDirectDistanceCodes);
+        assert_eq!(res.unwrap_err(), ParameterSetError::InvalidDirectDistanceCodes);
     }
 }
