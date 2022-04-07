@@ -2,7 +2,8 @@ use std::io::Write;
 use criterion::{criterion_group, criterion_main, Criterion, Throughput, BenchmarkId};
 use std::iter;
 use brotlic::{BrotliEncoderOptions, Quality, WindowSize};
-use rand::{Rng, RngCore, thread_rng};
+use rand::{Rng, RngCore, SeedableRng};
+use rand_pcg::Pcg32;
 
 fn brotli_compress(input: &[u8]) -> Vec<u8> {
     let mut compressor = {
@@ -84,25 +85,29 @@ fn gen_min_entropy(len: usize) -> Vec<u8> {
 
 fn gen_low_entropy(len: usize) -> Vec<u8> {
     let mut res = Vec::with_capacity(len);
-    res.resize_with(len, || thread_rng().gen_range(0u8..64u8));
+    let mut rng = Pcg32::seed_from_u64(len as u64);
+    res.resize_with(len, || rng.gen_range(0..64));
     res
 }
 
 fn gen_medium_entropy(len: usize) -> Vec<u8> {
     let mut res = Vec::with_capacity(len);
-    res.resize_with(len, || thread_rng().gen_range(0u8..128u8));
+    let mut rng = Pcg32::seed_from_u64(len as u64);
+    res.resize_with(len, || rng.gen_range(0..128));
     res
 }
 
 fn gen_high_entropy(len: usize) -> Vec<u8> {
     let mut res = Vec::with_capacity(len);
-    res.resize_with(len, || thread_rng().gen_range(0u8..192u8));
+    let mut rng = Pcg32::seed_from_u64(len as u64);
+    res.resize_with(len, || rng.gen_range(0..192));
     res
 }
 
 fn gen_max_entropy(len: usize) -> Vec<u8> {
     let mut res = vec![0; len];
-    thread_rng().fill_bytes(res.as_mut_slice());
+    let mut rng = Pcg32::seed_from_u64(len as u64);
+    rng.fill_bytes(res.as_mut_slice());
     res
 }
 
