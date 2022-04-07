@@ -822,6 +822,34 @@ mod tests {
     use super::*;
 
     #[test]
+    fn invalid_quality() {
+        let invalid = Quality::new(12);
+
+        assert_eq!(invalid.unwrap_err(), ParameterSetError::InvalidQuality);
+    }
+
+    #[test]
+    fn invalid_window_size() {
+        let invalid = WindowSize::new(25);
+
+        assert_eq!(invalid.unwrap_err(), ParameterSetError::InvalidWindowSize);
+    }
+
+    #[test]
+    fn invalid_large_window_size() {
+        let invalid = LargeWindowSize::new(31);
+
+        assert_eq!(invalid.unwrap_err(), ParameterSetError::InvalidWindowSize);
+    }
+
+    #[test]
+    fn invalid_block_size() {
+        let invalid = BlockSize::new(25);
+
+        assert_eq!(invalid.unwrap_err(), ParameterSetError::InvalidBlockSize);
+    }
+
+    #[test]
     fn valid_stream_offset() {
         let res = BrotliEncoderOptions::new()
             .stream_offset(1 << 30)
