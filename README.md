@@ -11,14 +11,15 @@ Brotlic (or BrotliC) is a thin wrapper around [brotli](https://github.com/google
     - [Requirements](#requirements)
     - [Usage](#usage)
     - [Performance](#performance)
-    - [Credits](#Credits)
     - [License](#license)
+    - [Contribution](#contribution)
+    - [Credits](#Credits)
 
-### Requirements
+## Requirements
 
 A __C__ compiler is required for building [brotli](https://github.com/google/brotli) with cargo.
 
-### Usage
+## Usage
 
 Brotlic provides Rust bindings to all compression and decompression APIs. On the fly compression and
 decompression is supported for both `BufRead` and `Write` via `CompressorReader<R>`,
@@ -118,7 +119,7 @@ let compressed_writer = CompressorWriter::with_encoder(encoder, writer);
 It is recommended to not use the encoder directly but instead pass it onto the higher level
 abstractions like `CompressorWriter<W>` or `DecompressorReader<R>`.
 
-### Performance
+## Performance
 
 Brotlic has comparable performance to the [rust-brotli library](https://github.com/dropbox/rust-brotli): 
 
@@ -127,12 +128,26 @@ Brotlic has comparable performance to the [rust-brotli library](https://github.c
 To conduct your own testing, run `cargo bench`. This will compare the performance of this library and the rust brotli
 library using inputs with different sizes and different amounts of entropy.
 
-### Credits
+## License
+
+Licensed under either of
+
+* Apache License, Version 2.0
+([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+* MIT license
+([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
+
+## Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.
+
+## Credits
 
 * [Aron Parker](https://github.com/AronParker) - for writing this library crate
 * [Brotli C library](https://github.com/google/brotli) - for the underlying C library
 * [JetBrains](https://www.jetbrains.com/) - for their amazing tooling (CLion)
-
-### License
-
-Brotlic is dual licensed under the Apache 2.0 license and the MIT license.
+* 
