@@ -129,7 +129,8 @@ pub use decode::DecompressorWriter;
 use brotlic_sys::*;
 use std::io::ErrorKind;
 use std::os::raw::c_int;
-use std::{error, fmt, io};
+use std::{fmt, io};
+use std::error::Error;
 
 /// Quality level of the brotli compression
 ///
@@ -731,7 +732,7 @@ impl Default for CompressionMode {
 }
 
 /// An error returned by [`compress`].
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct CompressError;
 
 impl fmt::Display for CompressError {
@@ -740,7 +741,7 @@ impl fmt::Display for CompressError {
     }
 }
 
-impl error::Error for CompressError {}
+impl Error for CompressError {}
 
 impl From<CompressError> for io::Error {
     fn from(err: CompressError) -> Self {
@@ -749,7 +750,7 @@ impl From<CompressError> for io::Error {
 }
 
 /// An error returned by [`decompress`].
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct DecompressError;
 
 impl fmt::Display for DecompressError {
@@ -758,7 +759,7 @@ impl fmt::Display for DecompressError {
     }
 }
 
-impl error::Error for DecompressError {}
+impl Error for DecompressError {}
 
 impl From<DecompressError> for io::Error {
     fn from(err: DecompressError) -> Self {
@@ -814,7 +815,7 @@ impl fmt::Display for SetParameterError {
     }
 }
 
-impl error::Error for SetParameterError {}
+impl Error for SetParameterError {}
 
 /// Read all bytes from `input` and compress them into `output`, returning how many bytes were
 /// written.
@@ -995,7 +996,7 @@ impl<I> From<IntoInnerError<I>> for io::Error {
     }
 }
 
-impl<I: fmt::Debug> error::Error for IntoInnerError<I> {}
+impl<I: fmt::Debug> Error for IntoInnerError<I> {}
 
 impl<I> fmt::Display for IntoInnerError<I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -11,7 +11,8 @@ use crate::{
 };
 use brotlic_sys::*;
 use std::io::{BufRead, Read, Write};
-use std::{error, fmt, io, mem, ptr, slice};
+use std::{fmt, io, mem, ptr, slice};
+use std::error::Error;
 
 /// A reference to a brotli encoder.
 ///
@@ -484,10 +485,10 @@ pub struct EncodeResult {
 }
 
 /// An error returned by [`BrotliEncoder::compress`].
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct EncodeError;
 
-impl error::Error for EncodeError {}
+impl Error for EncodeError {}
 
 impl fmt::Display for EncodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -822,7 +823,7 @@ impl WriterPanicked {
     }
 }
 
-impl error::Error for WriterPanicked {}
+impl Error for WriterPanicked {}
 
 impl fmt::Display for WriterPanicked {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

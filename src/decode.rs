@@ -8,7 +8,8 @@
 
 use std::ffi::CStr;
 use std::io::{BufRead, Read, Write};
-use std::{error, fmt, io, ptr, slice};
+use std::{fmt, io, ptr, slice};
+use std::error::Error;
 
 use brotlic_sys::*;
 
@@ -406,7 +407,7 @@ pub enum DecodeError {
     Unreachable = BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_UNREACHABLE as isize,
 }
 
-impl error::Error for DecodeError {}
+impl Error for DecodeError {}
 
 impl fmt::Display for DecodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -717,7 +718,7 @@ impl WriterPanicked {
     }
 }
 
-impl error::Error for WriterPanicked {}
+impl Error for WriterPanicked {}
 
 impl fmt::Display for WriterPanicked {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
