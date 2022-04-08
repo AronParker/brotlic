@@ -1,18 +1,13 @@
-use std::io::Write;
-use criterion::{criterion_group, criterion_main, Criterion, Throughput, BenchmarkId};
-use std::iter;
 use brotlic::{BrotliEncoderOptions, Quality, WindowSize};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use rand::{Rng, RngCore, SeedableRng};
 use rand_pcg::Pcg32;
+use std::io::Write;
+use std::iter;
 
 fn brotli_compress(input: &[u8]) -> Vec<u8> {
-    let mut compressor = {
-        brotli::CompressorWriter::new(
-            Vec::with_capacity(input.len()),
-            4096,
-            11,
-            24)
-    };
+    let mut compressor =
+        { brotli::CompressorWriter::new(Vec::with_capacity(input.len()), 4096, 11, 24) };
 
     compressor.write_all(input).unwrap();
     compressor.into_inner()
@@ -22,11 +17,11 @@ fn brotlic_compress(input: &[u8]) -> Vec<u8> {
     let encoder = BrotliEncoderOptions::new()
         .quality(Quality::new(11).unwrap())
         .window_size(WindowSize::new(24).unwrap())
-        .build().unwrap();
+        .build()
+        .unwrap();
 
-    let mut compressor = {
-        brotlic::CompressorWriter::with_encoder(encoder, Vec::with_capacity(input.len()))
-    };
+    let mut compressor =
+        { brotlic::CompressorWriter::with_encoder(encoder, Vec::with_capacity(input.len())) };
 
     compressor.write_all(input).unwrap();
     compressor.into_inner().unwrap()
@@ -41,12 +36,7 @@ pub fn bench(c: &mut Criterion) {
 }
 
 pub fn bench_entropy(c: &mut Criterion, name: &str, entropy_source: fn(usize) -> Vec<u8>) {
-    let input_sizes = {
-        iter::successors(
-            Some(1usize << 5),
-            |x| (*x).checked_shl(5),
-        )
-    };
+    let input_sizes = { iter::successors(Some(1usize << 5), |x| (*x).checked_shl(5)) };
 
     let mut group = c.benchmark_group(name);
 

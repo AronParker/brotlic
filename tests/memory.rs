@@ -10,12 +10,8 @@ fn verify(input: &[u8]) {
     let bound = brotlic::compress_bound(input.len(), quality).unwrap();
     let compressed = {
         let mut buf = vec![0; bound];
-        let size = brotlic::compress(
-            input,
-            buf.as_mut_slice(),
-            quality,
-            window_size,
-            mode).unwrap();
+        let size =
+            brotlic::compress(input, buf.as_mut_slice(), quality, window_size, mode).unwrap();
 
         buf.truncate(size);
         buf
@@ -23,9 +19,7 @@ fn verify(input: &[u8]) {
 
     let decompressed = {
         let mut buf = vec![0; input.len()];
-        let size = brotlic::decompress(
-            compressed.as_slice(),
-            buf.as_mut_slice()).unwrap();
+        let size = brotlic::decompress(compressed.as_slice(), buf.as_mut_slice()).unwrap();
 
         buf.truncate(size);
         buf

@@ -23,25 +23,19 @@ fn main() {
         let mut output_file = {
             let write_path = [path, ".br"].concat();
 
-            CompressorWriter::new(
-                File::create(write_path).expect("failed to create output file")
-            )
+            CompressorWriter::new(File::create(write_path).expect("failed to create output file"))
         };
 
         io::copy(&mut input_file, &mut output_file).expect("io error");
     } else {
         let mut input_file = {
-            DecompressorReader::new(
-                BufReader::new(
-                    File::open(path).expect("failed to read input file")
-                )
-            )
+            DecompressorReader::new(BufReader::new(
+                File::open(path).expect("failed to read input file"),
+            ))
         };
 
         let mut output_file = {
-            let write_path = path
-                .strip_suffix(".br")
-                .expect("not a a valid .br file");
+            let write_path = path.strip_suffix(".br").expect("not a a valid .br file");
 
             File::create(write_path).expect("failed to create output file")
         };

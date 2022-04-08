@@ -87,10 +87,10 @@ impl BrotliEncoder {
             BrotliEncoderCompressStream(
                 self.state,
                 op as BrotliEncoderOperation,
-                &mut input_len as _,
-                &mut input_ptr as _,
-                &mut output_len as _,
-                &mut output_ptr as _,
+                &mut input_len,
+                &mut input_ptr,
+                &mut output_len,
+                &mut output_ptr,
                 ptr::null_mut(),
             )
         };
@@ -99,13 +99,16 @@ impl BrotliEncoder {
             let bytes_read = input.len() - input_len;
             let bytes_written = output.len() - output_len;
 
-            Ok(EncoderResult { bytes_read, bytes_written })
+            Ok(EncoderResult {
+                bytes_read,
+                bytes_written,
+            })
         } else {
             Err(EncodeError)
         }
     }
 
-    /// Convience function to call method [`Self::compress`] with only input and no output.
+    /// Convenience function to call method [`Self::compress`] with only input and no output.
     pub fn give_input(&mut self, input: &[u8], op: BrotliOperation) -> Result<usize, EncodeError> {
         Ok(self.compress(input, &mut [], op)?.bytes_read)
     }
@@ -173,7 +176,11 @@ impl BrotliEncoder {
     ) -> Result<(), ParameterSetError> {
         let r = unsafe { BrotliEncoderSetParameter(self.state, param, value) };
 
-        if r != 0 { Ok(()) } else { Err(ParameterSetError::Generic) }
+        if r != 0 {
+            Ok(())
+        } else {
+            Err(ParameterSetError::Generic)
+        }
     }
 
     fn give_op(&mut self, op: BrotliOperation) -> Result<(), EncodeError> {
@@ -288,13 +295,13 @@ impl BrotliEncoderOptions {
     ///
     /// Warning: The decompressor needs explicit support in order to use this feature. This is not
     /// supported by the convenience [`decompress`] function. A matching [`BrotliDecoder`] must set
-    /// [`non_std_window_size_support`] to true to decode non standard window sizes properly.
+    /// [`large_window_size`] to true to decode non standard window sizes properly.
     ///
     /// [`LargeWindowSize`]: crate::LargeWindowSize
     /// [`decompress`]: crate::decompress
     /// [`BrotliDecoder`]: crate::decode::BrotliDecoder
-    /// [`non_std_window_size_support`]: crate::decode::BrotliDecoderOptions::non_std_window_size_support
-    pub fn non_std_window_size(&mut self, large_window_size: LargeWindowSize) -> &mut Self {
+    /// [`large_window_size`]: crate::decode::BrotliDecoderOptions::large_window_size
+    pub fn large_window_size(&mut self, large_window_size: LargeWindowSize) -> &mut Self {
         self.window_size = Some(large_window_size);
         self
     }
@@ -431,8 +438,9 @@ impl BrotliEncoderOptions {
         if let Some(direct_distance_codes) = self.direct_distance_codes {
             let postfix = self.postfix_bits.unwrap_or(0);
 
-            if (direct_distance_codes > (15 << postfix)) ||
-                (direct_distance_codes & ((1 << postfix) - 1)) != 0 {
+            if (direct_distance_codes > (15 << postfix))
+                || (direct_distance_codes & ((1 << postfix) - 1)) != 0
+            {
                 return Err(ParameterSetError::InvalidDirectDistanceCodes);
             }
 
@@ -604,9 +612,10 @@ impl<R: BufRead> Read for CompressorReader<R> {
         loop {
             let input = self.inner.fill_buf()?;
             let eof = input.is_empty();
-            let EncoderResult { bytes_read, bytes_written } = {
-                self.encoder.compress(input, buf, self.op)?
-            };
+            let EncoderResult {
+                bytes_read,
+                bytes_written,
+            } = self.encoder.compress(input, buf, self.op)?;
             self.inner.consume(bytes_read);
 
             match self.op {
@@ -855,9 +864,7 @@ mod tests {
 
     #[test]
     fn valid_stream_offset() {
-        let res = BrotliEncoderOptions::new()
-            .stream_offset(1 << 30)
-            .build();
+        let res = BrotliEncoderOptions::new().stream_offset(1 << 30).build();
 
         assert!(res.is_ok());
     }
@@ -873,18 +880,14 @@ mod tests {
 
     #[test]
     fn valid_postfix_bits() {
-        let res = BrotliEncoderOptions::new()
-            .postfix_bits(3)
-            .build();
+        let res = BrotliEncoderOptions::new().postfix_bits(3).build();
 
         assert!(res.is_ok());
     }
 
     #[test]
     fn invalid_postfix_bits() {
-        let res = BrotliEncoderOptions::new()
-            .postfix_bits(7)
-            .build();
+        let res = BrotliEncoderOptions::new().postfix_bits(7).build();
 
         assert_eq!(res.unwrap_err(), ParameterSetError::InvalidPostfix);
     }
@@ -906,6 +909,9 @@ mod tests {
             .direct_distance_codes(120)
             .build();
 
-        assert_eq!(res.unwrap_err(), ParameterSetError::InvalidDirectDistanceCodes);
+        assert_eq!(
+            res.unwrap_err(),
+            ParameterSetError::InvalidDirectDistanceCodes
+        );
     }
 }

@@ -118,8 +118,8 @@ pub mod encode;
 
 pub use encode::BrotliEncoder;
 pub use encode::BrotliEncoderOptions;
-pub use encode::CompressorWriter;
 pub use encode::CompressorReader;
+pub use encode::CompressorWriter;
 
 pub use decode::BrotliDecoder;
 pub use decode::BrotliDecoderOptions;
@@ -127,9 +127,9 @@ pub use decode::DecompressorReader;
 pub use decode::DecompressorWriter;
 
 use brotlic_sys::*;
+use std::io::ErrorKind;
 use std::os::raw::c_int;
 use std::{error, fmt, io};
-use std::io::ErrorKind;
 
 /// Quality level of the brotli compression
 ///
@@ -279,9 +279,9 @@ impl Default for Quality {
 /// Its maximum size is currently limited to 16 MiB, as specified in RFC7932 (Brotli proper).
 /// Larger window sizes are supported via [`LargeWindowSize`], however note that decompression
 /// support for these have to be explicitly enabled. This can be configured via
-/// [`non_std_window_size_support`] for the matching [`BrotliDecoder`].
+/// [`large_window_size`] for the matching [`BrotliDecoder`].
 ///
-/// [`non_std_window_size_support`]: decode::BrotliDecoderOptions::non_std_window_size_support()
+/// [`large_window_size`]: decode::BrotliDecoderOptions::large_window_size()
 /// [`BrotliDecoder`]: decode::BrotliDecoder
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct WindowSize(u8);
@@ -342,9 +342,9 @@ impl WindowSize {
     /// This is currently limited to 24 bits (16 MiB) due to RFC7932 (Brotli proper). To use larger
     /// sliding window sizes, please refer to [`LargeWindowSize`]. Note however that explicit
     /// support has to be enabled by the decoder. This is supported by enabling
-    /// [`non_std_window_size_support`] when constructing a [`BrotliDecoder`].
+    /// [`large_window_size`] when constructing a [`BrotliDecoder`].
     ///
-    /// [`non_std_window_size_support`]: decode::BrotliDecoderOptions::non_std_window_size_support()
+    /// [`large_window_size`]: decode::BrotliDecoderOptions::large_window_size()
     /// [`BrotliDecoder`]: decode::BrotliDecoder
     ///
     /// # Examples
@@ -443,10 +443,10 @@ impl TryFrom<LargeWindowSize> for WindowSize {
 /// The large sliding window size (in bits) to use for compression.
 ///
 /// Note that using a large sliding window size for a particular compressor requires explicit
-/// support by the decompressor. This is supported by enabling [`non_std_window_size_support`] when
+/// support by the decompressor. This is supported by enabling [`large_window_size`] when
 /// constructing a [`BrotliDecoder`].
 ///
-/// [`non_std_window_size_support`]: decode::BrotliDecoderOptions::non_std_window_size_support()
+/// [`large_window_size`]: decode::BrotliDecoderOptions::large_window_size()
 /// [`BrotliDecoder`]: decode::BrotliDecoder
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct LargeWindowSize(u8);
@@ -807,20 +807,15 @@ pub enum ParameterSetError {
 impl fmt::Display for ParameterSetError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParameterSetError::Generic =>
-                f.write_str("invalid parameter"),
-            ParameterSetError::InvalidPostfix =>
-                f.write_str("invalid number of postfix bits"),
-            ParameterSetError::InvalidDirectDistanceCodes =>
-                f.write_str("invalid number of direct distance codes"),
-            ParameterSetError::InvalidStreamOffset =>
-                f.write_str("stream offset was out of range"),
-            ParameterSetError::InvalidQuality =>
-                f.write_str("quality out of range"),
-            ParameterSetError::InvalidWindowSize =>
-                f.write_str("window size out of range"),
-            ParameterSetError::InvalidBlockSize =>
-                f.write_str("block size out of range"),
+            ParameterSetError::Generic => f.write_str("invalid parameter"),
+            ParameterSetError::InvalidPostfix => f.write_str("invalid number of postfix bits"),
+            ParameterSetError::InvalidDirectDistanceCodes => {
+                f.write_str("invalid number of direct distance codes")
+            }
+            ParameterSetError::InvalidStreamOffset => f.write_str("stream offset was out of range"),
+            ParameterSetError::InvalidQuality => f.write_str("quality out of range"),
+            ParameterSetError::InvalidWindowSize => f.write_str("window size out of range"),
+            ParameterSetError::InvalidBlockSize => f.write_str("block size out of range"),
         }
     }
 }

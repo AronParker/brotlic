@@ -75,10 +75,10 @@ impl BrotliDecoder {
         let result = unsafe {
             BrotliDecoderDecompressStream(
                 self.state,
-                &mut input_len as _,
-                &mut input_ptr as _,
-                &mut output_len as _,
-                &mut output_ptr as _,
+                &mut input_len,
+                &mut input_ptr,
+                &mut output_len,
+                &mut output_ptr,
                 ptr::null_mut(),
             )
         };
@@ -87,7 +87,7 @@ impl BrotliDecoder {
         let bytes_written = output.len() - output_len;
 
         #[allow(non_upper_case_globals)]
-            let info = match result {
+        let info = match result {
             BrotliDecoderResult_BROTLI_DECODER_RESULT_ERROR => return Err(self.last_error()),
             BrotliDecoderResult_BROTLI_DECODER_RESULT_SUCCESS => DecoderInfo::Finished,
             BrotliDecoderResult_BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT => {
@@ -99,10 +99,14 @@ impl BrotliDecoder {
             _ => panic!("BrotliDecoderDecompressStream returned an unknown error code"),
         };
 
-        Ok(DecoderResult { bytes_read, bytes_written, info })
+        Ok(DecoderResult {
+            bytes_read,
+            bytes_written,
+            info,
+        })
     }
 
-    /// Convience function to call method [`Self::decompress`] with only input.
+    /// Convenience function to call method [`Self::decompress`] with only input.
     pub fn give_input(&mut self, input: &[u8]) -> Result<(usize, DecoderInfo), DecodeError> {
         let res = self.decompress(input, &mut [])?;
 
@@ -146,7 +150,11 @@ impl BrotliDecoder {
     ) -> Result<(), ParameterSetError> {
         let r = unsafe { BrotliDecoderSetParameter(self.state, param, value) };
 
-        if r != 0 { Ok(()) } else { Err(ParameterSetError::Generic) }
+        if r != 0 {
+            Ok(())
+        } else {
+            Err(ParameterSetError::Generic)
+        }
     }
 
     fn last_error(&self) -> DecodeError {
@@ -258,12 +266,12 @@ impl Drop for BrotliDecoder {
 /// use brotlic::BrotliDecoderOptions;
 ///
 /// let encoder = BrotliDecoderOptions::new()
-///     .non_std_window_size_support(true)
+///     .large_window_size(true)
 ///     .build();
 /// ```
 pub struct BrotliDecoderOptions {
     disable_ring_buffer_reallocation: Option<bool>,
-    non_std_window_size_support: Option<bool>,
+    large_window_size: Option<bool>,
 }
 
 impl BrotliDecoderOptions {
@@ -274,7 +282,7 @@ impl BrotliDecoderOptions {
     pub fn new() -> Self {
         BrotliDecoderOptions {
             disable_ring_buffer_reallocation: None,
-            non_std_window_size_support: None,
+            large_window_size: None,
         }
     }
 
@@ -295,8 +303,8 @@ impl BrotliDecoderOptions {
     /// information see [`LargeWindowSize`].
     ///
     /// [`LargeWindowSize`]: crate::LargeWindowSize
-    pub fn non_std_window_size_support(&mut self, non_std_window_size_support: bool) -> &mut Self {
-        self.non_std_window_size_support = Some(non_std_window_size_support);
+    pub fn large_window_size(&mut self, large_window_size: bool) -> &mut Self {
+        self.large_window_size = Some(large_window_size);
         self
     }
 
@@ -316,9 +324,9 @@ impl BrotliDecoderOptions {
             decoder.set_param(key, value)?;
         }
 
-        if let Some(non_std_window_size_support) = self.non_std_window_size_support {
+        if let Some(large_window_size) = self.large_window_size {
             let key = BrotliDecoderParameter_BROTLI_DECODER_PARAM_LARGE_WINDOW;
-            let value = non_std_window_size_support as u32;
+            let value = large_window_size as u32;
 
             decoder.set_param(key, value)?;
         }
@@ -362,18 +370,18 @@ pub enum DecoderInfo {
 pub enum DecodeError {
     UnknownError = 0,
     FormatExuberantNibble =
-    BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_EXUBERANT_NIBBLE as isize,
+        BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_EXUBERANT_NIBBLE as isize,
     FormatReserved = BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_RESERVED as isize,
     FormatExuberantMetaNibble =
-    BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_EXUBERANT_META_NIBBLE as isize,
+        BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_EXUBERANT_META_NIBBLE as isize,
     FormatSimpleHuffmanAlphabet =
-    BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_SIMPLE_HUFFMAN_ALPHABET as isize,
+        BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_SIMPLE_HUFFMAN_ALPHABET as isize,
     FormatSimpleHuffmanSame =
-    BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_SIMPLE_HUFFMAN_SAME as isize,
+        BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_SIMPLE_HUFFMAN_SAME as isize,
     FormatClSpace = BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_CL_SPACE as isize,
     FormatHuffmanSpace = BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_HUFFMAN_SPACE as isize,
     FormatContextMapRepeat =
-    BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_CONTEXT_MAP_REPEAT as isize,
+        BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_CONTEXT_MAP_REPEAT as isize,
     FormatBlockLength1 = BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_BLOCK_LENGTH_1 as isize,
     FormatBlockLength2 = BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_BLOCK_LENGTH_2 as isize,
     FormatTransform = BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_FORMAT_TRANSFORM as isize,
@@ -391,7 +399,7 @@ pub enum DecodeError {
     AllocRingBuffer1 = BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_ALLOC_RING_BUFFER_1 as isize,
     AllocRingBuffer2 = BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_ALLOC_RING_BUFFER_2 as isize,
     AllocBlockTypeTrees =
-    BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_ALLOC_BLOCK_TYPE_TREES as isize,
+        BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_ALLOC_BLOCK_TYPE_TREES as isize,
     Unreachable = BrotliDecoderErrorCode_BROTLI_DECODER_ERROR_UNREACHABLE as isize,
 }
 
@@ -523,9 +531,11 @@ impl<R: BufRead> Read for DecompressorReader<R> {
         loop {
             let input = self.inner.fill_buf()?;
             let eof = input.is_empty();
-            let DecoderResult { bytes_read, bytes_written, info } = {
-                self.decoder.decompress(input, buf)?
-            };
+            let DecoderResult {
+                bytes_read,
+                bytes_written,
+                info,
+            } = self.decoder.decompress(input, buf)?;
             self.inner.consume(bytes_read);
 
             match info {
@@ -597,7 +607,7 @@ impl<W: Write> DecompressorWriter<W> {
     /// use brotlic::{BrotliDecoderOptions, DecompressorReader, DecompressorWriter};
     ///
     /// let decoder = BrotliDecoderOptions::new()
-    ///     .non_std_window_size_support(true)
+    ///     .large_window_size(true)
     ///     .build()?;
     ///
     /// let mut writer = DecompressorWriter::with_decoder(decoder, Vec::new());
