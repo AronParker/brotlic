@@ -10,9 +10,7 @@ fn main() {
     let matches = Command::new("br")
         .version("0.1")
         .about("File brotli compression tool")
-        .arg(
-            arg!([FILE] "The file to compress")
-                .required(true))
+        .arg(arg!(<FILE> "The file to compress"))
         .arg(arg!(-d --decompress))
         .get_matches();
 
