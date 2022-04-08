@@ -23,6 +23,9 @@ pub struct BrotliEncoder {
     state: *mut BrotliEncoderState,
 }
 
+unsafe impl Send for BrotliEncoder {}
+unsafe impl Sync for BrotliEncoder {}
+
 impl BrotliEncoder {
     /// Constructs a new brotli encoder instance.
     ///
