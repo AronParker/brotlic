@@ -667,7 +667,7 @@ impl BlockSize {
     /// assert_eq!(best_size, BlockSize::best());
     /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn best() -> BlockSize {
+    pub const fn best() -> BlockSize {
         BlockSize(BROTLI_MAX_INPUT_BLOCK_BITS)
     }
 
@@ -686,7 +686,7 @@ impl BlockSize {
     /// assert_eq!(worst_size, BlockSize::worst());
     /// # Ok::<(), brotlic::ParameterSetError>(())
     /// ```
-    pub fn worst() -> BlockSize {
+    pub const fn worst() -> BlockSize {
         BlockSize(BROTLI_MIN_INPUT_BLOCK_BITS)
     }
 
@@ -1013,4 +1013,3 @@ impl<I> fmt::Display for IntoInnerError<I> {
         self.error().fmt(f)
     }
 }
-
