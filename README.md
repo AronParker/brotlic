@@ -1,8 +1,9 @@
 # Brotlic
 
-[![crates.io](https://img.shields.io/crates/v/brotlic.svg)](https://crates.io/crates/brotlic)
-[![Released API docs](https://docs.rs/brotlic/badge.svg)](https://docs.rs/brotlic)
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/brotlic)](https://crates.io/crates/brotlic)
+[![docs.rs](https://img.shields.io/docsrs/brotlic)](https://docs.rs/brotlic)
+[![GitHub Workflow Status](https://github.com/AronParker/brotlic/actions/workflows/rust.yml/badge.svg)](https://github.com/AronParker/brotlic/actions/workflows/rust.yml)
+![License](https://img.shields.io/crates/l/brotlic)
 
 Brotlic (or BrotliC) is a thin wrapper around [brotli](https://github.com/google/brotli).
 
