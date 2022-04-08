@@ -110,7 +110,8 @@
 //! It is recommended to not use the encoder directly but instead pass it onto the higher level
 //! abstractions like `CompressorWriter<W>` or `DecompressorReader<R>`.
 
-#![warn(missing_docs)]
+#![deny(warnings)]
+#![deny(missing_docs)]
 
 pub mod decode;
 pub mod encode;
