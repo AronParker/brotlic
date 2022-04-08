@@ -12,7 +12,7 @@ use std::{error, fmt, io, ptr, slice};
 
 use brotlic_sys::*;
 
-use crate::{IntoInnerError, ParameterSetError};
+use crate::{IntoInnerError, SetParameterError};
 
 /// A reference to a brotli decoder.
 ///
@@ -150,13 +150,13 @@ impl BrotliDecoder {
         &mut self,
         param: BrotliDecoderParameter,
         value: u32,
-    ) -> Result<(), ParameterSetError> {
+    ) -> Result<(), SetParameterError> {
         let r = unsafe { BrotliDecoderSetParameter(self.state, param, value) };
 
         if r != 0 {
             Ok(())
         } else {
-            Err(ParameterSetError::Generic)
+            Err(SetParameterError::Generic)
         }
     }
 
@@ -317,7 +317,7 @@ impl BrotliDecoderOptions {
     ///
     /// If any of the preconditions of the parameters are violated, an error is returned.
     #[doc(alias = "BrotliDecoderSetParameter")]
-    pub fn build(&self) -> Result<BrotliDecoder, ParameterSetError> {
+    pub fn build(&self) -> Result<BrotliDecoder, SetParameterError> {
         let mut decoder = BrotliDecoder::new();
 
         if let Some(disable_ring_buffer_reallocation) = self.disable_ring_buffer_reallocation {
@@ -486,7 +486,7 @@ impl<R: BufRead> DecompressorReader<R> {
     ///
     /// let source = [11, 2, 128, 104, 101, 108, 108, 111, 3]; // decompresses to "hello"
     /// let mut decompressor = DecompressorReader::with_decoder(decoder, source.as_slice());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub fn with_decoder(decoder: BrotliDecoder, inner: R) -> Self {
         DecompressorReader { inner, decoder }
@@ -614,7 +614,7 @@ impl<W: Write> DecompressorWriter<W> {
     ///     .build()?;
     ///
     /// let mut writer = DecompressorWriter::with_decoder(decoder, Vec::new());
-    /// Ok::<(), brotlic::ParameterSetError>(())
+    /// Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub fn with_decoder(decoder: BrotliDecoder, inner: W) -> Self {
         DecompressorWriter {

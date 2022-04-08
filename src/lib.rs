@@ -104,7 +104,7 @@
 //!
 //! let compressed_writer = CompressorWriter::with_encoder(encoder, Vec::new());
 //!
-//! # Ok::<(), brotlic::ParameterSetError>(())
+//! # Ok::<(), brotlic::SetParameterError>(())
 //! ```
 //!
 //! It is recommended to not use the encoder directly but instead pass it onto the higher level
@@ -159,12 +159,12 @@ impl Quality {
     ///
     /// assert_eq!(worst_quality, Quality::worst());
     /// assert_eq!(best_quality, Quality::best());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
-    pub const fn new(level: u8) -> Result<Quality, ParameterSetError> {
+    pub const fn new(level: u8) -> Result<Quality, SetParameterError> {
         match level {
             BROTLI_MIN_QUALITY..=BROTLI_MAX_QUALITY => Ok(Quality(level)),
-            _ => Err(ParameterSetError::InvalidQuality),
+            _ => Err(SetParameterError::InvalidQuality),
         }
     }
 
@@ -204,7 +204,7 @@ impl Quality {
     /// let best_quality = Quality::new(11)?;
     ///
     /// assert_eq!(best_quality, Quality::best());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn best() -> Quality {
         Quality(BROTLI_MAX_QUALITY)
@@ -222,7 +222,7 @@ impl Quality {
     /// let default_quality = Quality::new(11)?;
     ///
     /// assert_eq!(default_quality, Quality::default());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn default() -> Quality {
         Quality(BROTLI_DEFAULT_QUALITY)
@@ -241,7 +241,7 @@ impl Quality {
     /// let worst_quality = Quality::new(0)?;
     ///
     /// assert_eq!(worst_quality, Quality::worst());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn worst() -> Quality {
         Quality(BROTLI_MIN_QUALITY)
@@ -257,7 +257,7 @@ impl Quality {
     /// let quality = Quality::new(4)?;
     ///
     /// assert_eq!(quality.level(), 4);
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn level(&self) -> u8 {
         self.0
@@ -305,12 +305,12 @@ impl WindowSize {
     ///
     /// assert_eq!(worst_size, WindowSize::worst());
     /// assert_eq!(best_size, WindowSize::best());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
-    pub const fn new(bits: u8) -> Result<WindowSize, ParameterSetError> {
+    pub const fn new(bits: u8) -> Result<WindowSize, SetParameterError> {
         match bits {
             BROTLI_MIN_WINDOW_BITS..=BROTLI_MAX_WINDOW_BITS => Ok(WindowSize(bits)),
-            _ => Err(ParameterSetError::InvalidWindowSize),
+            _ => Err(SetParameterError::InvalidWindowSize),
         }
     }
 
@@ -355,7 +355,7 @@ impl WindowSize {
     /// let best_size = WindowSize::new(24)?;
     ///
     /// assert_eq!(best_size, WindowSize::best());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn best() -> WindowSize {
         WindowSize(BROTLI_MAX_WINDOW_BITS)
@@ -373,7 +373,7 @@ impl WindowSize {
     /// let default_size = WindowSize::new(22)?;
     ///
     /// assert_eq!(default_size, WindowSize::default());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn default() -> WindowSize {
         WindowSize(BROTLI_DEFAULT_WINDOW)
@@ -391,7 +391,7 @@ impl WindowSize {
     /// let worst_size = WindowSize::new(10)?;
     ///
     /// assert_eq!(worst_size, WindowSize::worst());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn worst() -> WindowSize {
         WindowSize(BROTLI_MIN_WINDOW_BITS)
@@ -407,7 +407,7 @@ impl WindowSize {
     /// let window_size = WindowSize::new(24)?;
     ///
     /// assert_eq!(window_size.bits(), 24);
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn bits(&self) -> u8 {
         self.0
@@ -425,7 +425,7 @@ impl Default for WindowSize {
 }
 
 impl TryFrom<LargeWindowSize> for WindowSize {
-    type Error = ParameterSetError;
+    type Error = SetParameterError;
 
     /// Attempts to construct a [`WindowSize`] from a [`LargeWindowSize`].
     ///
@@ -470,12 +470,12 @@ impl LargeWindowSize {
     ///
     /// assert_eq!(worst_size, LargeWindowSize::worst());
     /// assert_eq!(best_size, LargeWindowSize::best());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
-    pub const fn new(bits: u8) -> Result<LargeWindowSize, ParameterSetError> {
+    pub const fn new(bits: u8) -> Result<LargeWindowSize, SetParameterError> {
         match bits {
             BROTLI_MIN_WINDOW_BITS..=BROTLI_LARGE_MAX_WINDOW_BITS => Ok(LargeWindowSize(bits)),
-            _ => Err(ParameterSetError::InvalidWindowSize),
+            _ => Err(SetParameterError::InvalidWindowSize),
         }
     }
 
@@ -515,7 +515,7 @@ impl LargeWindowSize {
     /// let best_size = LargeWindowSize::new(30)?;
     ///
     /// assert_eq!(best_size, LargeWindowSize::best());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn best() -> LargeWindowSize {
         LargeWindowSize(BROTLI_LARGE_MAX_WINDOW_BITS)
@@ -533,7 +533,7 @@ impl LargeWindowSize {
     /// let default_size = LargeWindowSize::new(22)?;
     ///
     /// assert_eq!(default_size, LargeWindowSize::default());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn default() -> LargeWindowSize {
         LargeWindowSize(BROTLI_DEFAULT_WINDOW)
@@ -551,7 +551,7 @@ impl LargeWindowSize {
     /// let worst_size = LargeWindowSize::new(10)?;
     ///
     /// assert_eq!(worst_size, LargeWindowSize::worst());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn worst() -> LargeWindowSize {
         LargeWindowSize(BROTLI_MIN_WINDOW_BITS)
@@ -567,7 +567,7 @@ impl LargeWindowSize {
     /// let window_size = LargeWindowSize::new(28)?;
     ///
     /// assert_eq!(window_size.bits(), 28);
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn bits(&self) -> u8 {
         self.0
@@ -621,12 +621,12 @@ impl BlockSize {
     ///
     /// assert_eq!(worst_size, BlockSize::worst());
     /// assert_eq!(best_size, BlockSize::best());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
-    pub const fn new(bits: u8) -> Result<BlockSize, ParameterSetError> {
+    pub const fn new(bits: u8) -> Result<BlockSize, SetParameterError> {
         match bits {
             BROTLI_MIN_INPUT_BLOCK_BITS..=BROTLI_MAX_INPUT_BLOCK_BITS => Ok(BlockSize(bits)),
-            _ => Err(ParameterSetError::InvalidBlockSize),
+            _ => Err(SetParameterError::InvalidBlockSize),
         }
     }
 
@@ -665,7 +665,7 @@ impl BlockSize {
     /// let best_size = BlockSize::new(24)?;
     ///
     /// assert_eq!(best_size, BlockSize::best());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn best() -> BlockSize {
         BlockSize(BROTLI_MAX_INPUT_BLOCK_BITS)
@@ -684,7 +684,7 @@ impl BlockSize {
     /// let worst_size = BlockSize::new(16)?;
     ///
     /// assert_eq!(worst_size, BlockSize::worst());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn worst() -> BlockSize {
         BlockSize(BROTLI_MIN_INPUT_BLOCK_BITS)
@@ -700,7 +700,7 @@ impl BlockSize {
     /// let block_size = BlockSize::new(23)?;
     ///
     /// assert_eq!(block_size.bits(), 23);
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub const fn bits(&self) -> u8 {
         self.0
@@ -772,7 +772,7 @@ impl From<DecompressError> for io::Error {
 /// [`BrotliDecoderOptions::build`]: decode::BrotliDecoderOptions::build
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[non_exhaustive]
-pub enum ParameterSetError {
+pub enum SetParameterError {
     /// The encoder or decoder returned an error.
     ///
     /// This error originates from `BrotliEncoderSetParameter` or `BrotliDecoderSetParameter` being
@@ -798,23 +798,23 @@ pub enum ParameterSetError {
     InvalidBlockSize,
 }
 
-impl fmt::Display for ParameterSetError {
+impl fmt::Display for SetParameterError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParameterSetError::Generic => f.write_str("invalid parameter"),
-            ParameterSetError::InvalidPostfix => f.write_str("invalid number of postfix bits"),
-            ParameterSetError::InvalidDirectDistanceCodes => {
+            SetParameterError::Generic => f.write_str("invalid parameter"),
+            SetParameterError::InvalidPostfix => f.write_str("invalid number of postfix bits"),
+            SetParameterError::InvalidDirectDistanceCodes => {
                 f.write_str("invalid number of direct distance codes")
             }
-            ParameterSetError::InvalidStreamOffset => f.write_str("stream offset was out of range"),
-            ParameterSetError::InvalidQuality => f.write_str("quality out of range"),
-            ParameterSetError::InvalidWindowSize => f.write_str("window size out of range"),
-            ParameterSetError::InvalidBlockSize => f.write_str("block size out of range"),
+            SetParameterError::InvalidStreamOffset => f.write_str("stream offset was out of range"),
+            SetParameterError::InvalidQuality => f.write_str("quality out of range"),
+            SetParameterError::InvalidWindowSize => f.write_str("window size out of range"),
+            SetParameterError::InvalidBlockSize => f.write_str("block size out of range"),
         }
     }
 }
 
-impl error::Error for ParameterSetError {}
+impl error::Error for SetParameterError {}
 
 /// Read all bytes from `input` and compress them into `output`, returning how many bytes were
 /// written.

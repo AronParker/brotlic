@@ -6,7 +6,7 @@
 //! [`Write`]: https://doc.rust-lang.org/stable/std/io/trait.Write.html
 
 use crate::{
-    BlockSize, CompressionMode, IntoInnerError, LargeWindowSize, ParameterSetError, Quality,
+    BlockSize, CompressionMode, IntoInnerError, LargeWindowSize, SetParameterError, Quality,
     WindowSize,
 };
 use brotlic_sys::*;
@@ -176,13 +176,13 @@ impl BrotliEncoder {
         &mut self,
         param: BrotliEncoderParameter,
         value: u32,
-    ) -> Result<(), ParameterSetError> {
+    ) -> Result<(), SetParameterError> {
         let r = unsafe { BrotliEncoderSetParameter(self.state, param, value) };
 
         if r != 0 {
             Ok(())
         } else {
-            Err(ParameterSetError::Generic)
+            Err(SetParameterError::Generic)
         }
     }
 
@@ -237,7 +237,7 @@ pub enum BrotliOperation {
 ///     .quality(Quality::new(5)?)
 ///     .build()?;
 ///
-/// # Ok::<(), brotlic::ParameterSetError>(())
+/// # Ok::<(), brotlic::SetParameterError>(())
 /// ```
 pub struct BrotliEncoderOptions {
     mode: Option<CompressionMode>,
@@ -375,7 +375,7 @@ impl BrotliEncoderOptions {
     ///
     /// If any of the preconditions of the parameters are violated, an error is returned.
     #[doc(alias = "BrotliEncoderSetParameter")]
-    pub fn build(&self) -> Result<BrotliEncoder, ParameterSetError> {
+    pub fn build(&self) -> Result<BrotliEncoder, SetParameterError> {
         let mut encoder = BrotliEncoder::new();
 
         if let Some(mode) = self.mode {
@@ -429,7 +429,7 @@ impl BrotliEncoderOptions {
 
         if let Some(postfix_bits) = self.postfix_bits {
             if postfix_bits > 3 {
-                return Err(ParameterSetError::InvalidPostfix);
+                return Err(SetParameterError::InvalidPostfix);
             }
 
             let key = BrotliEncoderParameter_BROTLI_PARAM_NPOSTFIX;
@@ -444,7 +444,7 @@ impl BrotliEncoderOptions {
             if (direct_distance_codes > (15 << postfix))
                 || (direct_distance_codes & ((1 << postfix) - 1)) != 0
             {
-                return Err(ParameterSetError::InvalidDirectDistanceCodes);
+                return Err(SetParameterError::InvalidDirectDistanceCodes);
             }
 
             let key = BrotliEncoderParameter_BROTLI_PARAM_NDIRECT;
@@ -455,7 +455,7 @@ impl BrotliEncoderOptions {
 
         if let Some(stream_offset) = self.stream_offset {
             if stream_offset > (1 << 30) {
-                return Err(ParameterSetError::InvalidStreamOffset);
+                return Err(SetParameterError::InvalidStreamOffset);
             }
 
             let key = BrotliEncoderParameter_BROTLI_PARAM_STREAM_OFFSET;
@@ -563,7 +563,7 @@ impl<R: BufRead> CompressorReader<R> {
     ///
     /// let underlying_source = [1, 2, 3, 4, 5];
     /// let writer = CompressorReader::with_encoder(encoder, underlying_source.as_slice());
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub fn with_encoder(encoder: BrotliEncoder, inner: R) -> Self {
         CompressorReader {
@@ -705,7 +705,7 @@ impl<W: Write> CompressorWriter<W> {
     ///
     /// let underlying_storage = Vec::new();
     /// let writer = CompressorWriter::with_encoder(encoder, underlying_storage);
-    /// # Ok::<(), brotlic::ParameterSetError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub fn with_encoder(encoder: BrotliEncoder, inner: W) -> Self {
         CompressorWriter {
@@ -841,28 +841,28 @@ mod tests {
     fn invalid_quality() {
         let invalid = Quality::new(12);
 
-        assert_eq!(invalid.unwrap_err(), ParameterSetError::InvalidQuality);
+        assert_eq!(invalid.unwrap_err(), SetParameterError::InvalidQuality);
     }
 
     #[test]
     fn invalid_window_size() {
         let invalid = WindowSize::new(25);
 
-        assert_eq!(invalid.unwrap_err(), ParameterSetError::InvalidWindowSize);
+        assert_eq!(invalid.unwrap_err(), SetParameterError::InvalidWindowSize);
     }
 
     #[test]
     fn invalid_large_window_size() {
         let invalid = LargeWindowSize::new(31);
 
-        assert_eq!(invalid.unwrap_err(), ParameterSetError::InvalidWindowSize);
+        assert_eq!(invalid.unwrap_err(), SetParameterError::InvalidWindowSize);
     }
 
     #[test]
     fn invalid_block_size() {
         let invalid = BlockSize::new(25);
 
-        assert_eq!(invalid.unwrap_err(), ParameterSetError::InvalidBlockSize);
+        assert_eq!(invalid.unwrap_err(), SetParameterError::InvalidBlockSize);
     }
 
     #[test]
@@ -878,7 +878,7 @@ mod tests {
             .stream_offset((1 << 30) + 2)
             .build();
 
-        assert_eq!(res.unwrap_err(), ParameterSetError::InvalidStreamOffset);
+        assert_eq!(res.unwrap_err(), SetParameterError::InvalidStreamOffset);
     }
 
     #[test]
@@ -892,7 +892,7 @@ mod tests {
     fn invalid_postfix_bits() {
         let res = BrotliEncoderOptions::new().postfix_bits(7).build();
 
-        assert_eq!(res.unwrap_err(), ParameterSetError::InvalidPostfix);
+        assert_eq!(res.unwrap_err(), SetParameterError::InvalidPostfix);
     }
 
     #[test]
@@ -914,7 +914,7 @@ mod tests {
 
         assert_eq!(
             res.unwrap_err(),
-            ParameterSetError::InvalidDirectDistanceCodes
+            SetParameterError::InvalidDirectDistanceCodes
         );
     }
 }
