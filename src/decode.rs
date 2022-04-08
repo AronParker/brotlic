@@ -275,7 +275,7 @@ pub struct BrotliDecoderOptions {
 }
 
 impl BrotliDecoderOptions {
-    /// Creeates a new blank set decoder options.
+    /// Creates a new blank set decoder options.
     ///
     /// initially no modifications are applied to the decoder and everything is set to its default
     /// values.
