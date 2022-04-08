@@ -66,7 +66,7 @@ impl BrotliDecoder {
         &mut self,
         input: &[u8],
         output: &mut [u8],
-    ) -> Result<DecoderResult, DecodeError> {
+    ) -> Result<DecodeResult, DecodeError> {
         let mut input_ptr = input.as_ptr();
         let mut input_len = input.len();
         let mut output_ptr = output.as_mut_ptr();
@@ -99,7 +99,7 @@ impl BrotliDecoder {
             _ => panic!("BrotliDecoderDecompressStream returned an unknown error code"),
         };
 
-        Ok(DecoderResult {
+        Ok(DecodeResult {
             bytes_read,
             bytes_written,
             info,
@@ -343,7 +343,7 @@ impl Default for BrotliDecoderOptions {
 
 /// A struct used by [`BrotliDecoder::decompress`].
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct DecoderResult {
+pub struct DecodeResult {
     /// The number of bytes read from `input`.
     pub bytes_read: usize,
     /// The number of bytes written to `output`.
@@ -531,7 +531,7 @@ impl<R: BufRead> Read for DecompressorReader<R> {
         loop {
             let input = self.inner.fill_buf()?;
             let eof = input.is_empty();
-            let DecoderResult {
+            let DecodeResult {
                 bytes_read,
                 bytes_written,
                 info,

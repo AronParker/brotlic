@@ -748,9 +748,6 @@ impl From<CompressError> for io::Error {
     }
 }
 
-/// a specialized [`Result`] type returned by [`compress`].
-pub type CompressionResult<T> = Result<T, CompressError>;
-
 /// An error returned by [`decompress`].
 #[derive(Debug)]
 pub struct DecompressError;
@@ -768,9 +765,6 @@ impl From<DecompressError> for io::Error {
         io::Error::new(ErrorKind::Other, err)
     }
 }
-
-/// a specialized [`Result`] type returned by [`decompress`].
-pub type DecompressionResult<T> = Result<T, DecompressError>;
 
 /// An error returned by [`BrotliEncoderOptions::build`] and [`BrotliDecoderOptions::build`]
 ///
@@ -865,7 +859,7 @@ pub fn compress(
     quality: Quality,
     window_size: WindowSize,
     mode: CompressionMode,
-) -> CompressionResult<usize> {
+) -> Result<usize, CompressError> {
     let mut output_size = output.len();
 
     let res = unsafe {
@@ -941,7 +935,7 @@ pub fn compress_bound(input_size: usize, quality: Quality) -> Option<usize> {
 /// # Ok::<(), std::io::Error>(())
 /// ```
 #[doc(alias = "BrotliDecoderDecompress")]
-pub fn decompress(input: &[u8], output: &mut [u8]) -> DecompressionResult<usize> {
+pub fn decompress(input: &[u8], output: &mut [u8]) -> Result<usize, DecompressError> {
     let mut output_size = output.len();
 
     let res = unsafe {

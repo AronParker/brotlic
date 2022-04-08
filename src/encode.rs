@@ -77,7 +77,7 @@ impl BrotliEncoder {
         input: &[u8],
         output: &mut [u8],
         op: BrotliOperation,
-    ) -> Result<EncoderResult, EncodeError> {
+    ) -> Result<EncodeResult, EncodeError> {
         let mut input_ptr = input.as_ptr();
         let mut input_len = input.len();
         let mut output_ptr = output.as_mut_ptr();
@@ -99,7 +99,7 @@ impl BrotliEncoder {
             let bytes_read = input.len() - input_len;
             let bytes_written = output.len() - output_len;
 
-            Ok(EncoderResult {
+            Ok(EncodeResult {
                 bytes_read,
                 bytes_written,
             })
@@ -473,7 +473,7 @@ impl Default for BrotliEncoderOptions {
 
 /// A struct used by [`BrotliEncoder::compress`].
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct EncoderResult {
+pub struct EncodeResult {
     /// the number of bytes read from `input`.
     pub bytes_read: usize,
     /// the number of bytes written to `output`.
@@ -612,7 +612,7 @@ impl<R: BufRead> Read for CompressorReader<R> {
         loop {
             let input = self.inner.fill_buf()?;
             let eof = input.is_empty();
-            let EncoderResult {
+            let EncodeResult {
                 bytes_read,
                 bytes_written,
             } = self.encoder.compress(input, buf, self.op)?;
