@@ -273,6 +273,7 @@ impl Drop for BrotliDecoder {
 ///     .large_window_size(true)
 ///     .build();
 /// ```
+#[derive(Debug, Clone)]
 pub struct BrotliDecoderOptions {
     disable_ring_buffer_reallocation: Option<bool>,
     large_window_size: Option<bool>,

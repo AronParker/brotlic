@@ -240,6 +240,7 @@ pub enum BrotliOperation {
 ///
 /// # Ok::<(), brotlic::SetParameterError>(())
 /// ```
+#[derive(Debug, Clone)]
 pub struct BrotliEncoderOptions {
     mode: Option<CompressionMode>,
     quality: Option<Quality>,
