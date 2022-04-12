@@ -1,0 +1,5 @@
+#include "../brotli/c/include/brotli/encode.h"
+#include "../brotli/c/include/brotli/port.h"
+#include "../brotli/c/include/brotli/shared_dictionary.h"
+#include "../brotli/c/include/brotli/types.h"
+#include "../brotli/c/include/brotli/decode.h"

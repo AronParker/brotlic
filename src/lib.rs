@@ -978,7 +978,7 @@ impl<I> IntoInnerError<I> {
     }
 
     /// Returns the error which caused the `into_inner` call to fail. This is used to obtain
-    /// ownership of the error in contrast to [`error`].
+    /// ownership of the error in contrast to `error`.
     pub fn into_error(self) -> io::Error {
         self.1
     }

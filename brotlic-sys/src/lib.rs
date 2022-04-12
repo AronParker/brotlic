@@ -1,5 +1,4 @@
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
+#![allow(nonstandard_style)]
 #![allow(rustdoc::broken_intra_doc_links)]
 
 use std::ffi::c_void;

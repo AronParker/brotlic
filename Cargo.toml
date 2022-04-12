@@ -1,6 +1,6 @@
 [package]
 name = "brotlic"
-version = "0.6.1"
+version = "0.6.2"
 edition = "2021"
 authors = ["Aron Parker <hl3mukkel@gmail.com>", "The Brotli Authors"]
 description = """
@@ -16,7 +16,7 @@ categories = ["compression", "api-bindings"]
 readme = "README.md"
 
 [dependencies]
-brotlic-sys = { version = "0.1.0", path = "brotlic-sys" }
+brotlic-sys = { version = "0.2.0", path = "brotlic-sys" }
 
 [dev-dependencies]
 brotli = "3.3.4"

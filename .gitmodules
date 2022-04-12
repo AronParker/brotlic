@@ -1,0 +1,3 @@
+[submodule "brotlic-sys/brotli"]
+	path = brotlic-sys/brotli
+	url = https://github.com/google/brotli

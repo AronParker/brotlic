@@ -1,6 +1,6 @@
 [package]
 name = "brotlic-sys"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Aron Parker <hl3mukkel@gmail.com>"]
 description = """
@@ -12,6 +12,16 @@ repository = "https://github.com/AronParker/brotlic"
 keywords = ["brotli", "compression", "decompression"]
 categories = ["compression", "api-bindings"]
 readme = "README.md"
+
+include = [
+	"src/*",
+	"brotli/c/enc/*",
+	"brotli/c/dec/*",
+	"brotli/c/common/*",
+	"brotli/c/include/*",
+	"Cargo.toml",
+	"build.rs"
+]
 
 [lib]
 doctest=false
