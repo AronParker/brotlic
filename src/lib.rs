@@ -996,7 +996,7 @@ impl<I> From<IntoInnerError<I>> for io::Error {
     }
 }
 
-impl<I: fmt::Debug> Error for IntoInnerError<I> {}
+impl<I: fmt::Debug + Send> Error for IntoInnerError<I> {}
 
 impl<I> fmt::Display for IntoInnerError<I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
