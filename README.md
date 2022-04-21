@@ -40,12 +40,12 @@ When dealing with [`Write`]:
 
 To simplify this decision, the following table outlines all the differences:
 
-|                           | Input        | Output       | Wraps       |
-|---------------------------|--------------|--------------|-------------|
-| `CompressorReader<R>`     | Uncompressed | Compressed   | [`BufRead`] |
-| `DecompressorReader<R>`   | Compressed   | Uncompressed | [`BufRead`] |
-| `CompressorWriter<W>`     | Uncompressed | Compressed   | [`Write`]   |
-| `DecompressorWriter<W>`   | Compressed   | Uncompressed | [`Write`]   |
+|                         | Input      | Output     | Wraps       |
+|-------------------------|------------|------------|-------------|
+| `CompressorReader<R>`   | Raw        | Compressed | [`BufRead`] |
+| `DecompressorReader<R>` | Compressed | Raw        | [`BufRead`] |
+| `CompressorWriter<W>`   | Raw        | Compressed | [`Write`]   |
+| `DecompressorWriter<W>` | Compressed | Raw        | [`Write`]   |
 
 [`BufRead`]: https://doc.rust-lang.org/std/io/trait.BufRead.html
 [`Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
