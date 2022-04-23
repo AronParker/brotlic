@@ -517,7 +517,7 @@ impl<R: BufRead> DecompressorReader<R> {
         } else {
             Err(IntoInnerError::new(
                 self,
-                io::Error::from(io::ErrorKind::UnexpectedEof),
+                io::ErrorKind::UnexpectedEof.into(),
             ))
         }
     }
@@ -547,7 +547,7 @@ impl<R: BufRead> Read for DecompressorReader<R> {
                 _ if bytes_written > 0 => return Ok(bytes_written),
                 DecoderInfo::Finished => return Ok(0),
                 DecoderInfo::NeedsMoreInput if eof => {
-                    return Err(io::Error::from(io::ErrorKind::UnexpectedEof));
+                    return Err(io::ErrorKind::UnexpectedEof.into());
                 }
                 DecoderInfo::NeedsMoreInput => continue,
                 DecoderInfo::NeedsMoreOutput if buf.is_empty() => return Ok(0),
@@ -654,7 +654,7 @@ impl<W: Write> DecompressorWriter<W> {
         } else {
             Err(IntoInnerError::new(
                 self,
-                io::Error::from(io::ErrorKind::UnexpectedEof),
+                io::ErrorKind::UnexpectedEof.into(),
             ))
         }
     }

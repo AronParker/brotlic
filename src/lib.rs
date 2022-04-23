@@ -127,7 +127,6 @@ pub use decode::DecompressorReader;
 pub use decode::DecompressorWriter;
 
 use brotlic_sys::*;
-use std::io::ErrorKind;
 use std::os::raw::c_int;
 use std::{fmt, io};
 use std::error::Error;
@@ -745,7 +744,7 @@ impl Error for CompressError {}
 
 impl From<CompressError> for io::Error {
     fn from(err: CompressError) -> Self {
-        io::Error::new(ErrorKind::Other, err)
+        io::Error::new(io::ErrorKind::Other, err)
     }
 }
 
@@ -763,7 +762,7 @@ impl Error for DecompressError {}
 
 impl From<DecompressError> for io::Error {
     fn from(err: DecompressError) -> Self {
-        io::Error::new(ErrorKind::Other, err)
+        io::Error::new(io::ErrorKind::Other, err)
     }
 }
 

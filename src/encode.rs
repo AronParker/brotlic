@@ -598,7 +598,7 @@ impl<R: BufRead> CompressorReader<R> {
         } else {
             Err(IntoInnerError::new(
                 self,
-                io::Error::from(io::ErrorKind::UnexpectedEof),
+                io::ErrorKind::UnexpectedEof.into(),
             ))
         }
     }
