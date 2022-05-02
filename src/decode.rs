@@ -6,10 +6,11 @@
 //! [`Read`]: https://doc.rust-lang.org/stable/std/io/trait.Read.html
 //! [`Write`]: https://doc.rust-lang.org/stable/std/io/trait.Write.html
 
+use std::alloc::GlobalAlloc;
+use std::error::Error;
 use std::ffi::CStr;
 use std::io::{BufRead, Read, Write};
 use std::{fmt, io, ptr, slice};
-use std::error::Error;
 
 use brotlic_sys::*;
 
@@ -20,9 +21,12 @@ use crate::{IntoInnerError, SetParameterError};
 /// This decoder contains internal state of the decoding process. This low-level wrapper intended to
 /// be used for people who are familiar with the C API. For higher level abstractions, see
 /// [`DecompressorReader`] and [`DecompressorWriter`].
-#[derive(Debug)]
 pub struct BrotliDecoder {
     state: *mut BrotliDecoderState,
+
+    // this field is read read across FFI boundaries
+    #[allow(dead_code)]
+    alloc: Option<Box<Box<dyn GlobalAlloc>>>,
 }
 
 unsafe impl Send for BrotliDecoder {}
@@ -34,21 +38,48 @@ impl BrotliDecoder {
     /// # Panics
     ///
     /// Panics if the decoder fails to be allocated or initialized
+    #[doc(alias = "BrotliDecoderCreateInstance")]
     pub fn new() -> Self {
-        unsafe {
-            let instance = BrotliDecoderCreateInstance(None, None, ptr::null_mut());
+        let instance = unsafe { BrotliDecoderCreateInstance(None, None, ptr::null_mut()) };
 
-            if !instance.is_null() {
-                BrotliDecoder { state: instance }
-            } else {
-                panic!(
-                    "BrotliDecoderCreateInstance returned NULL: failed to allocate or initialize"
-                );
+        if !instance.is_null() {
+            BrotliDecoder {
+                state: instance,
+                alloc: None,
             }
+        } else {
+            panic!("BrotliDecoderCreateInstance returned NULL: failed to allocate or initialize");
+        }
+    }
+
+    /// Constructs a new brotli decoder instance using allocator `alloc`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the decoder fails to be allocated or initialized
+    #[doc(alias = "BrotliDecoderCreateInstance")]
+    pub fn new_in<A>(alloc: A) -> Self
+    where
+        A: GlobalAlloc + 'static,
+    {
+        let alloc: Box<Box<dyn GlobalAlloc>> = Box::new(Box::new(alloc));
+        let alloc_ptr: *const Box<dyn GlobalAlloc> = alloc.as_ref();
+        let instance = unsafe {
+            BrotliDecoderCreateInstance(Some(crate::malloc), Some(crate::free), alloc_ptr as _)
+        };
+
+        if !instance.is_null() {
+            BrotliDecoder {
+                state: instance,
+                alloc: Some(alloc),
+            }
+        } else {
+            panic!("BrotliDecoderCreateInstance returned NULL: failed to allocate or initialize");
         }
     }
 
     /// Checks if the decoder instance reached its final state.
+    #[doc(alias = "BrotliDecoderIsFinished")]
     pub fn is_finished(&self) -> bool {
         unsafe { BrotliDecoderIsFinished(self.state) != 0 }
     }
@@ -66,6 +97,7 @@ impl BrotliDecoder {
     /// if `info` is [`DecoderInfo::NeedsMoreInput`], more input is required to continue decoding.
     /// Likewise, if `info` is [`DecoderInfo::NeedsMoreOutput`], more output is required to continue
     /// the decoding conversion. [`DecoderInfo::Finished`] indicates that the decoding has finished.
+    #[doc(alias = "BrotliDecoderDecompressStream")]
     pub fn decompress(
         &mut self,
         input: &[u8],
@@ -118,6 +150,7 @@ impl BrotliDecoder {
     }
 
     /// Checks if the decoder has more output.
+    #[doc(alias = "BrotliDecoderHasMoreOutput")]
     pub fn has_output(&self) -> bool {
         unsafe { BrotliDecoderHasMoreOutput(self.state) != 0 }
     }
@@ -131,6 +164,7 @@ impl BrotliDecoder {
     /// # Safety
     ///
     /// For every consecutive call of this function, the previous slice becomes invalidated.
+    #[doc(alias = "BrotliDecoderTakeOutput")]
     pub unsafe fn take_output(&mut self) -> Option<&[u8]> {
         if self.has_output() {
             let mut len: usize = 0;
@@ -143,6 +177,7 @@ impl BrotliDecoder {
     }
 
     /// Returns the version of the C brotli decoder library.
+    #[doc(alias = "BrotliDecoderVersion")]
     pub fn version() -> u32 {
         unsafe { BrotliDecoderVersion() }
     }
@@ -247,6 +282,14 @@ impl BrotliDecoder {
     }
 }
 
+impl fmt::Debug for BrotliDecoder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("BrotliDecoder")
+            .field("state", &self.state)
+            .finish_non_exhaustive()
+    }
+}
+
 impl Default for BrotliDecoder {
     fn default() -> Self {
         BrotliDecoder::new()
@@ -322,6 +365,29 @@ impl BrotliDecoderOptions {
     pub fn build(&self) -> Result<BrotliDecoder, SetParameterError> {
         let mut decoder = BrotliDecoder::new();
 
+        self.configure(&mut decoder)?;
+
+        Ok(decoder)
+    }
+
+    /// Creates a brotli decoder with the specified settings using allocator `alloc`.
+    ///
+    /// # Errors
+    ///
+    /// If any of the preconditions of the parameters are violated, an error is returned.
+    #[doc(alias = "BrotliDecoderSetParameter")]
+    pub fn build_in<A>(&self, alloc: A) -> Result<BrotliDecoder, SetParameterError>
+    where
+        A: GlobalAlloc + 'static,
+    {
+        let mut decoder = BrotliDecoder::new_in(alloc);
+
+        self.configure(&mut decoder)?;
+
+        Ok(decoder)
+    }
+
+    fn configure(&self, decoder: &mut BrotliDecoder) -> Result<(), SetParameterError> {
         if let Some(disable_ring_buffer_reallocation) = self.disable_ring_buffer_reallocation {
             let key = BrotliDecoderParameter_BROTLI_DECODER_PARAM_DISABLE_RING_BUFFER_REALLOCATION;
             let value = disable_ring_buffer_reallocation as u32;
@@ -336,7 +402,7 @@ impl BrotliDecoderOptions {
             decoder.set_param(key, value)?;
         }
 
-        Ok(decoder)
+        Ok(())
     }
 }
 
@@ -474,6 +540,21 @@ impl<R: BufRead> DecompressorReader<R> {
         }
     }
 
+    /// Creates a new `DecompressorReader<R>` with a newly created decoder using allocator `alloc`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the decoder fails to be allocated or initialized
+    pub fn new_in<A>(inner: R, alloc: A) -> Self
+    where
+        A: GlobalAlloc + 'static,
+    {
+        DecompressorReader {
+            inner,
+            decoder: BrotliDecoder::new_in(alloc),
+        }
+    }
+
     /// Creates a new `DecompressorReader<R>` with a specified decoder.
     ///
     /// # Examples
@@ -599,6 +680,22 @@ impl<W: Write> DecompressorWriter<W> {
         DecompressorWriter {
             inner,
             decoder: BrotliDecoder::new(),
+            panicked: false,
+        }
+    }
+
+    /// Creates a new `DecompressorWriter<W>` with a newly created decoder using allocator `alloc`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the decoder fails to be allocated or initialized
+    pub fn new_in<A>(inner: W, alloc: A) -> Self
+    where
+        A: GlobalAlloc + 'static,
+    {
+        DecompressorWriter {
+            inner,
+            decoder: BrotliDecoder::new_in(alloc),
             panicked: false,
         }
     }
