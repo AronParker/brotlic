@@ -2,16 +2,15 @@ use std::fs::File;
 use std::io;
 use std::io::BufReader;
 
-use clap::{arg, Command};
-
 use brotlic::{CompressorWriter, DecompressorReader};
+use clap::{arg, Command};
 
 fn main() {
     let matches = Command::new("br")
         .version("0.1")
         .about("File brotli compression tool")
         .arg(arg!(<FILE> "The file to compress"))
-        .arg(arg!(-d --decompress))
+        .arg(arg!(-d - -decompress))
         .get_matches();
 
     let path = matches.value_of("FILE").expect("supplied by clap");

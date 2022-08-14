@@ -1,5 +1,6 @@
-use brotlic::{CompressorReader, CompressorWriter, DecompressorReader, DecompressorWriter};
 use std::io::{Read, Write};
+
+use brotlic::{CompressorReader, CompressorWriter, DecompressorReader, DecompressorWriter};
 
 mod common;
 

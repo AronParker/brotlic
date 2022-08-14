@@ -1,25 +1,29 @@
 //! Module that contains the brotli encoder instances
 //!
-//! Contains compression abstractions over [`Read`] and [`Write`] and a dedicated low-level encoder.
+//! Contains compression abstractions over [`Read`] and [`Write`] and a
+//! dedicated low-level encoder.
 //!
 //! [`Read`]: https://doc.rust-lang.org/stable/std/io/trait.Read.html
 //! [`Write`]: https://doc.rust-lang.org/stable/std/io/trait.Write.html
 
-use crate::{
-    BlockSize, CompressionMode, IntoInnerError, LargeWindowSize, Quality, SetParameterError,
-    WindowSize,
-};
-use brotlic_sys::*;
 use std::alloc::GlobalAlloc;
 use std::error::Error;
 use std::io::{BufRead, Read, Write};
 use std::{fmt, io, mem, ptr, slice};
 
+use brotlic_sys::*;
+
+use crate::{
+    BlockSize, CompressionMode, IntoInnerError, LargeWindowSize, Quality, SetParameterError,
+    WindowSize,
+};
+
 /// A reference to a brotli encoder.
 ///
-/// This encoder contains internal state of the encoding process. This low-level wrapper intended to
-/// be used for people who are familiar with the C API. For higher level abstractions, see
-/// [`CompressorReader`] and [`CompressorWriter`].
+/// This encoder contains internal state of the encoding process. This low-level
+/// wrapper intended to be used for people who are familiar with the C API. For
+/// higher level abstractions, see [`CompressorReader`] and
+/// [`CompressorWriter`].
 pub struct BrotliEncoder {
     state: *mut BrotliEncoderState,
 
@@ -85,15 +89,18 @@ impl BrotliEncoder {
 
     /// Compresses input stream to output stream.
     ///
-    /// This is a low-level API, for higher level abstractions see [`CompressorReader`] or
-    /// [`CompressorWriter`]. Returns the number of bytes that were read and written.
-    /// Bytes are read from `input`, the number of bytes read is returned in
-    /// the `bytes_read` field of the result. Bytes are written to `output`, the number of bytes
-    /// written is returned in the `bytes_written` field of the result. The operation `op` specifies
-    /// the intention behind this call, whether it is to simply process input, flush the input or
-    /// finish the input. Care must be taken to not swap, reduce or extend the input stream while
-    /// flushing or finishing. Additionally the operation should not change until all the input has
-    /// been processed and all the output has been read from the internal buffer.
+    /// This is a low-level API, for higher level abstractions see
+    /// [`CompressorReader`] or [`CompressorWriter`]. Returns the number of
+    /// bytes that were read and written. Bytes are read from `input`, the
+    /// number of bytes read is returned in the `bytes_read` field of the
+    /// result. Bytes are written to `output`, the number of bytes written is
+    /// returned in the `bytes_written` field of the result. The operation `op`
+    /// specifies the intention behind this call, whether it is to simply
+    /// process input, flush the input or finish the input. Care must be taken
+    /// to not swap, reduce or extend the input stream while flushing or
+    /// finishing. Additionally the operation should not change until all the
+    /// input has been processed and all the output has been read from the
+    /// internal buffer.
     ///
     /// The internal workflow consists of three steps:
     ///
@@ -101,8 +108,9 @@ impl BrotliEncoder {
     /// 2. compress input
     /// 3. write into output from the internal buffer
     ///
-    /// Whenever any of these tasks can't move forward, control flow is returned to the caller. This
-    /// is a wrapper around the `BrotliEncoderCompressStream` function of the C brotli API. For more
+    /// Whenever any of these tasks can't move forward, control flow is returned
+    /// to the caller. This is a wrapper around the
+    /// `BrotliEncoderCompressStream` function of the C brotli API. For more
     /// information consult its documentation.
     #[doc(alias = "BrotliEncoderCompressStream")]
     pub fn compress(
@@ -141,29 +149,34 @@ impl BrotliEncoder {
         }
     }
 
-    /// Convenience function to call method [`Self::compress`] with only input and no output.
+    /// Convenience function to call method [`Self::compress`] with only input
+    /// and no output.
     pub fn give_input(&mut self, input: &[u8], op: BrotliOperation) -> Result<usize, EncodeError> {
         Ok(self.compress(input, &mut [], op)?.bytes_read)
     }
 
     /// Attempts the flush the encoding stream.
     ///
-    /// Actual flush is performed when all output has been successfully read. Use
-    /// [`Self::has_output`] to verify that flushing completedNo other modifying operation should be
-    /// queried before flushing has been finalized. When flush is complete, output data will be
-    /// sufficient for a decoder to reproduce all given input. Calling this function might resulting
-    /// in a worse compression ratio, because the encoder is forced to emit all output immediately.
+    /// Actual flush is performed when all output has been successfully read.
+    /// Use [`Self::has_output`] to verify that flushing completedNo other
+    /// modifying operation should be queried before flushing has been
+    /// finalized. When flush is complete, output data will be sufficient for a
+    /// decoder to reproduce all given input. Calling this function might
+    /// resulting in a worse compression ratio, because the encoder is forced to
+    /// emit all output immediately.
     pub fn flush(&mut self) -> Result<(), EncodeError> {
         self.give_op(BrotliOperation::Flush)
     }
 
     /// Finalizes the encoding stream.
     ///
-    /// Actual finalization is performed when all output from the
-    /// encoder has been successfully read. Use [`Self::is_finished`] to verify that the
-    /// encoder is finished. Once this method has been called, no further input should be processed.
+    /// Actual finalization is performed when all output from the encoder has
+    /// been successfully read. Use [`Self::is_finished`] to verify that the
+    /// encoder is finished. Once this method has been called, no further input
+    /// should be processed.
     ///
-    /// For more information, see `BrotliEncoderOperation::BROTLI_OPERATION_FINISH`
+    /// For more information, see
+    /// `BrotliEncoderOperation::BROTLI_OPERATION_FINISH`
     pub fn finish(&mut self) -> Result<(), EncodeError> {
         self.give_op(BrotliOperation::Finish)
     }
@@ -174,17 +187,19 @@ impl BrotliEncoder {
         unsafe { BrotliEncoderHasMoreOutput(self.state) != 0 }
     }
 
-    /// Checks if the encoder has more output and if so, returns a slice to its internal output
-    /// buffer.
+    /// Checks if the encoder has more output and if so, returns a slice to its
+    /// internal output buffer.
     ///
-    /// Each byte returned from the slice is considered "consumed" and must be used as it
-    /// will not be returned again. Encoder output is not guaranteed to be contagious, which means
-    /// that this function can return `Some(&[u8])` multiple times. Only when the method returns
-    /// `None` is when there is no more output available by the encoder.
+    /// Each byte returned from the slice is considered "consumed" and must be
+    /// used as it will not be returned again. Encoder output is not guaranteed
+    /// to be contagious, which means that this function can return
+    /// `Some(&[u8])` multiple times. Only when the method returns `None` is
+    /// when there is no more output available by the encoder.
     ///
     /// # Safety
     ///
-    /// For every consecutive call of this function, the previous slice becomes invalidated.
+    /// For every consecutive call of this function, the previous slice becomes
+    /// invalidated.
     #[doc(alias = "BrotliEncoderTakeOutput")]
     pub unsafe fn take_output(&mut self) -> Option<&[u8]> {
         if self.has_output() {
@@ -252,14 +267,16 @@ pub enum BrotliOperation {
     /// Instructs the encoder to keep processing input data.
     Process = BrotliEncoderOperation_BROTLI_OPERATION_PROCESS as isize,
 
-    /// Instructs the encoder to commit a flushing operation. Care must be taken once a flush is
-    /// initiated, to keep submitting flush operations till the encoder has no more output
-    /// available. Additionally, the input stream should not be swapped, reduced or extended.
+    /// Instructs the encoder to commit a flushing operation. Care must be taken
+    /// once a flush is initiated, to keep submitting flush operations till the
+    /// encoder has no more output available. Additionally, the input stream
+    /// should not be swapped, reduced or extended.
     Flush = BrotliEncoderOperation_BROTLI_OPERATION_FLUSH as isize,
 
-    /// Instructs the encoder to commit a finish operation. Care must be taken once a finishing
-    /// operation is initiated, to keep submitting flush operations till the encoder has no more
-    /// output available. Additionally, the input stream should not be swapped, reduced or extended.
+    /// Instructs the encoder to commit a finish operation. Care must be taken
+    /// once a finishing operation is initiated, to keep submitting flush
+    /// operations till the encoder has no more output available. Additionally,
+    /// the input stream should not be swapped, reduced or extended.
     Finish = BrotliEncoderOperation_BROTLI_OPERATION_FINISH as isize,
 }
 
@@ -294,8 +311,8 @@ pub struct BrotliEncoderOptions {
 impl BrotliEncoderOptions {
     /// Creates a new blank set encoder options.
     ///
-    /// initially no modifications are applied to the encoder and everything is set to its default
-    /// values.
+    /// initially no modifications are applied to the encoder and everything is
+    /// set to its default values.
     pub fn new() -> Self {
         BrotliEncoderOptions {
             mode: None,
@@ -316,8 +333,9 @@ impl BrotliEncoderOptions {
         self
     }
 
-    /// The main compression speed-desnity lever. Higher quality means better compression ratios at
-    /// the expense of slower compression times. For more information see [`Quality`]
+    /// The main compression speed-desnity lever. Higher quality means better
+    /// compression ratios at the expense of slower compression times. For more
+    /// information see [`Quality`]
     ///
     /// [`Quality`]: crate::Quality
     pub fn quality(&mut self, quality: Quality) -> &mut Self {
@@ -325,8 +343,8 @@ impl BrotliEncoderOptions {
         self
     }
 
-    /// Recommended sliding LZ77 window size according to RFC7932 (Brotli proper). For more
-    /// information see [`WindowSize`].
+    /// Recommended sliding LZ77 window size according to RFC7932 (Brotli
+    /// proper). For more information see [`WindowSize`].
     ///
     /// [`WindowSize`]: crate::WindowSize
     pub fn window_size(&mut self, window_size: WindowSize) -> &mut Self {
@@ -334,11 +352,13 @@ impl BrotliEncoderOptions {
         self
     }
 
-    /// The non-standard large window size to use. For more information see [`LargeWindowSize`].
+    /// The non-standard large window size to use. For more information see
+    /// [`LargeWindowSize`].
     ///
-    /// Warning: The decompressor needs explicit support in order to use this feature. This is not
-    /// supported by the convenience [`decompress`] function. A matching [`BrotliDecoder`] must set
-    /// [`large_window_size`] to true to decode non standard window sizes properly.
+    /// Warning: The decompressor needs explicit support in order to use this
+    /// feature. This is not supported by the convenience [`decompress`]
+    /// function. A matching [`BrotliDecoder`] must set [`large_window_size`] to
+    /// true to decode non standard window sizes properly.
     ///
     /// [`LargeWindowSize`]: crate::LargeWindowSize
     /// [`decompress`]: crate::decompress
@@ -351,8 +371,8 @@ impl BrotliEncoderOptions {
 
     /// The recommended input block size to use.
     ///
-    /// The encoder may reduce this value, e.g. when the input is much smaller than the input block
-    /// size.
+    /// The encoder may reduce this value, e.g. when the input is much smaller
+    /// than the input block size.
     pub fn block_size(&mut self, block_size: BlockSize) -> &mut Self {
         self.block_bits = Some(block_size);
         self
@@ -360,8 +380,8 @@ impl BrotliEncoderOptions {
 
     /// Disable "literal context modeling" format feature.
     ///
-    /// Disabling literal context modeling decreases compression ratio in favor of decompression
-    /// speed.
+    /// Disabling literal context modeling decreases compression ratio in favor
+    /// of decompression speed.
     pub fn disable_context_modeling(&mut self, disable_context_modeling: bool) -> &mut Self {
         self.disable_context_modeling = Some(disable_context_modeling);
         self
@@ -389,8 +409,8 @@ impl BrotliEncoderOptions {
     ///
     /// The encoder may change this value on the fly.
     ///
-    /// Valid range is from 0 to (15 << postfix) inclusive in steps of (1 << postfix), where postfix
-    /// is the number of postfix bits.
+    /// Valid range is from 0 to (15 << postfix) inclusive in steps of (1 <<
+    /// postfix), where postfix is the number of postfix bits.
     pub fn direct_distance_codes(&mut self, direct_distance_codes: u32) -> &mut Self {
         self.direct_distance_codes = Some(direct_distance_codes);
         self
@@ -398,22 +418,24 @@ impl BrotliEncoderOptions {
 
     /// Number of bytes already processed by a different instance.
     ///
-    /// It is worth noting that when using this parameter, all other encoders must share the same
-    /// parameters, so that all encoded parts obey the same restrictions as implied by the header of
-    /// the compression stream.
+    /// It is worth noting that when using this parameter, all other encoders
+    /// must share the same parameters, so that all encoded parts obey the same
+    /// restrictions as implied by the header of the compression stream.
     ///
-    /// If the offset is non-zero, the stream header is omitted. Values greater than 2**30 are not
-    /// allowed.
+    /// If the offset is non-zero, the stream header is omitted. Values greater
+    /// than 2**30 are not allowed.
     pub fn stream_offset(&mut self, stream_offset: u32) -> &mut Self {
         self.stream_offset = Some(stream_offset);
         self
     }
 
-    /// Creates a brotli encoder with the specified settings using allocator `alloc`.
+    /// Creates a brotli encoder with the specified settings using allocator
+    /// `alloc`.
     ///
     /// # Errors
     ///
-    /// If any of the preconditions of the parameters are violated, an error is returned.
+    /// If any of the preconditions of the parameters are violated, an error is
+    /// returned.
     #[doc(alias = "BrotliEncoderSetParameter")]
     pub fn build(&self) -> Result<BrotliEncoder, SetParameterError> {
         let mut encoder = BrotliEncoder::new();
@@ -427,7 +449,8 @@ impl BrotliEncoderOptions {
     ///
     /// # Errors
     ///
-    /// If any of the preconditions of the parameters are violated, an error is returned.
+    /// If any of the preconditions of the parameters are violated, an error is
+    /// returned.
     #[doc(alias = "BrotliEncoderSetParameter")]
     pub fn build_in<A>(&self, alloc: A) -> Result<BrotliEncoder, SetParameterError>
     where
@@ -566,18 +589,21 @@ impl From<EncodeError> for io::Error {
 
 /// Wraps a reader and compresses its output.
 ///
-/// The compression stream produced by brotli must be finished in order to be decompressed. This is
-/// done when the underlying reader reaches EOF. Therefore, `CompressorReader<R>` does not work with
-/// `BufRead`s that return an infinite amount of data. When [`read`] returns zero on a non-zero
-/// buffer, the compression is considered finished.
+/// The compression stream produced by brotli must be finished in order to be
+/// decompressed. This is done when the underlying reader reaches EOF.
+/// Therefore, `CompressorReader<R>` does not work with `BufRead`s that return
+/// an infinite amount of data. When [`read`] returns zero on a non-zero buffer,
+/// the compression is considered finished.
 ///
 /// # Examples
 ///
-/// Suppose the file `test.txt` contains uncompressed text. Let's try to compress it:
+/// Suppose the file `test.txt` contains uncompressed text. Let's try to
+/// compress it:
 ///
 /// ```no_run
 /// use std::fs::File;
 /// use std::io::Read;
+///
 /// use brotlic::DecompressorWriter;
 ///
 /// let mut input = File::open("test.txt")?; // test.brotli is brotli compressed
@@ -612,7 +638,8 @@ impl<R: BufRead> CompressorReader<R> {
         }
     }
 
-    /// Creates a new `CompressorReader<R>` with a newly created encoder using allocator `alloc`.
+    /// Creates a new `CompressorReader<R>` with a newly created encoder using
+    /// allocator `alloc`.
     ///
     /// # Panics
     ///
@@ -668,7 +695,8 @@ impl<R: BufRead> CompressorReader<R> {
     ///
     /// # Errors
     ///
-    /// An [`Err`] will be returned if the compression stream has not been finished.
+    /// An [`Err`] will be returned if the compression stream has not been
+    /// finished.
     pub fn into_inner(self) -> Result<R, IntoInnerError<CompressorReader<R>>> {
         if self.encoder.is_finished() {
             Ok(self.inner)
@@ -680,10 +708,11 @@ impl<R: BufRead> CompressorReader<R> {
         }
     }
 
-    /// Disassembles this `CompressorReader<R>`, returning the underlying reader and encoder.
+    /// Disassembles this `CompressorReader<R>`, returning the underlying reader
+    /// and encoder.
     ///
-    /// `into_parts` makes no attempt to validate that the compression stream finished and cannot
-    /// fail.
+    /// `into_parts` makes no attempt to validate that the compression stream
+    /// finished and cannot fail.
     pub fn into_parts(self) -> (R, BrotliEncoder) {
         (self.inner, self.encoder)
     }
@@ -717,22 +746,26 @@ impl<R: BufRead> Read for CompressorReader<R> {
 
 /// Wraps a writer and compresses its output.
 ///
-/// `CompressorWriter<W>` wraps a writer and adds brotli compression to the output. It is critical
-/// to finish the compression stream, otherwise decompression will not be successful. Dropping will
-/// attempt to finish the compression stream, any errors that might arise however will be ignored.
+/// `CompressorWriter<W>` wraps a writer and adds brotli compression to the
+/// output. It is critical to finish the compression stream, otherwise
+/// decompression will not be successful. Dropping will attempt to finish the
+/// compression stream, any errors that might arise however will be ignored.
 /// Calling [`into_inner`] ensures that the compression stream is finished.
 ///
-/// Calling [`flush`] will not only flush the underlying writer, but also flush all of its
-/// compression stream. This will lead to a slight decrease of compression quality, as output
-/// will be forced to be flushed as is and not compressed till the block is finished.
+/// Calling [`flush`] will not only flush the underlying writer, but also flush
+/// all of its compression stream. This will lead to a slight decrease of
+/// compression quality, as output will be forced to be flushed as is and not
+/// compressed till the block is finished.
 ///
 /// # Examples
 ///
-/// Let's compress some text file named `text.txt` and write the output to `test.brotli`:
+/// Let's compress some text file named `text.txt` and write the output to
+/// `test.brotli`:
 ///
 /// ```no_run
 /// use std::fs::File;
 /// use std::io;
+///
 /// use brotlic::CompressorWriter;
 ///
 /// let mut input = File::open("test.txt")?; // test.txt is uncompressed
@@ -770,7 +803,8 @@ impl<W: Write> CompressorWriter<W> {
         }
     }
 
-    /// Creates a new `CompressorWriter<W>` with a newly created encoder using allocator `alloc`.
+    /// Creates a new `CompressorWriter<W>` with a newly created encoder using
+    /// allocator `alloc`.
     ///
     /// # Panics
     ///
@@ -828,7 +862,8 @@ impl<W: Write> CompressorWriter<W> {
     ///
     /// # Errors
     ///
-    /// An [`Err`] will be returned if an error occurs while finishing the compression stream.
+    /// An [`Err`] will be returned if an error occurs while finishing the
+    /// compression stream.
     pub fn into_inner(mut self) -> Result<W, IntoInnerError<CompressorWriter<W>>> {
         match self.finish() {
             Err(e) => Err(IntoInnerError::new(self, e)),
@@ -836,14 +871,17 @@ impl<W: Write> CompressorWriter<W> {
         }
     }
 
-    /// Disassembles this `CompressorWriter<W>`, returning the underlying writer and encoder.
+    /// Disassembles this `CompressorWriter<W>`, returning the underlying writer
+    /// and encoder.
     ///
-    /// If the underlying writer panicked, it is not known what portion of the data was written.
-    /// In this case, we return `WriterPanicked` to get the encoder back. It is worth noting that
-    /// the compression stream is not finished and hence cannot be successfully decompressed. To
-    /// obtain the writer once the compression stream is finished, use [`into_inner`].
+    /// If the underlying writer panicked, it is not known what portion of the
+    /// data was written. In this case, we return `WriterPanicked` to get the
+    /// encoder back. It is worth noting that the compression stream is not
+    /// finished and hence cannot be successfully decompressed. To obtain the
+    /// writer once the compression stream is finished, use [`into_inner`].
     ///
-    /// `into_parts` makes no attempt to finish the compression stream and cannot fail.
+    /// `into_parts` makes no attempt to finish the compression stream and
+    /// cannot fail.
     ///
     /// [`into_inner`]: Self::into_inner
     pub fn into_parts(self) -> (W, Result<BrotliEncoder, WriterPanicked>) {
@@ -902,16 +940,18 @@ impl<W: Write> Drop for CompressorWriter<W> {
     }
 }
 
-/// Error returned from [`CompressorWriter::into_inner`], when the underlying writer has
-/// previously panicked. Contains the encoder that was used for compression.
+/// Error returned from [`CompressorWriter::into_inner`], when the underlying
+/// writer has previously panicked. Contains the encoder that was used for
+/// compression.
 #[derive(Debug)]
 pub struct WriterPanicked {
     encoder: BrotliEncoder,
 }
 
 impl WriterPanicked {
-    /// Returns the encoder that was used for compression. It is unknown what data was fed to the
-    /// encoder, so simply using it to finish it is not a good idea.
+    /// Returns the encoder that was used for compression. It is unknown what
+    /// data was fed to the encoder, so simply using it to finish it is not a
+    /// good idea.
     pub fn into_inner(self) -> BrotliEncoder {
         self.encoder
     }
@@ -922,8 +962,7 @@ impl Error for WriterPanicked {}
 impl fmt::Display for WriterPanicked {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(
-            "CompressorWriter inner writer panicked, what \
-            data remains unwritten is not known",
+            "CompressorWriter inner writer panicked, what data remains unwritten is not known",
         )
     }
 }

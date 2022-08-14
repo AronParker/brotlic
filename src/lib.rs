@@ -1,23 +1,27 @@
 //! # Brotlic
 //!
 //! Brotlic (or BrotliC) is a thin wrapper around [brotli](https://github.com/google/brotli). It
-//! provides Rust bindings to all compression and decompression APIs. On the fly compression and
-//! decompression is supported for both `BufRead` and `Write` via [`CompressorReader<R>`,
-//! `CompressorWriter<W>`, `DecompressorReader<R>` and `DecompressorWriter<W>`. For low-level
-//! instances, see `BrotliEncoder` and `BrotliDecoder`. These can be configured via
-//! `BrotliEncoderOptions` and `BrotliDecoderOptions` respectively.
+//! provides Rust bindings to all compression and decompression APIs. On the fly
+//! compression and decompression is supported for both `BufRead` and `Write`
+//! via [`CompressorReader<R>`, `CompressorWriter<W>`, `DecompressorReader<R>`
+//! and `DecompressorWriter<W>`. For low-level instances, see `BrotliEncoder`
+//! and `BrotliDecoder`. These can be configured via `BrotliEncoderOptions` and
+//! `BrotliDecoderOptions` respectively.
 //!
 //! ## High level abstractions
 //!
 //! When dealing with [`BufRead`]:
 //!
-//! * [`DecompressorReader<R>`] - Reads a brotli compressed input stream and decompresses it.
+//! * [`DecompressorReader<R>`] - Reads a brotli compressed input stream and
+//!   decompresses it.
 //! * [`CompressorReader<R>`] - Reads a stream and compresses it while reading.
 //!
 //! When dealing with [`Write`]:
 //!
-//! * [`CompressorWriter<W>`] - Writes brotli compressed data to the underlying writer.
-//! * [`DecompressorWriter<W>`] - Writes brotli decompressed data to the underlying writer.
+//! * [`CompressorWriter<W>`] - Writes brotli compressed data to the underlying
+//!   writer.
+//! * [`DecompressorWriter<W>`] - Writes brotli decompressed data to the
+//!   underlying writer.
 //!
 //! To simplify this decision, the following table outlines all the differences:
 //!
@@ -36,6 +40,7 @@
 //! ```no_run
 //! use std::fs::File;
 //! use std::io::{self, Write};
+//!
 //! use brotlic::CompressorWriter;
 //!
 //! let mut input = File::open("test.txt")?; // uncompressed text file
@@ -52,6 +57,7 @@
 //! ```no_run
 //! use std::fs::File;
 //! use std::io::{self, BufReader, Read};
+//!
 //! use brotlic::DecompressorReader;
 //!
 //! let mut input = BufReader::new(File::open("test.brotli")?); // uncompressed text file
@@ -69,6 +75,7 @@
 //!
 //! ```
 //! use std::io::{self, Read, Write};
+//!
 //! use brotlic::{CompressorWriter, DecompressorReader};
 //!
 //! let input = vec![0; 1024];
@@ -91,7 +98,8 @@
 //!
 //! ## Customizing compression quality
 //!
-//! Sometimes it can be desirable to trade run-time costs for an even better compression ratio:
+//! Sometimes it can be desirable to trade run-time costs for an even better
+//! compression ratio:
 //!
 //! ```
 //! use brotlic::{BlockSize, BrotliEncoderOptions, CompressorWriter, Quality, WindowSize};
@@ -107,8 +115,9 @@
 //! # Ok::<(), brotlic::SetParameterError>(())
 //! ```
 //!
-//! It is recommended to not use the encoder directly but instead pass it onto the higher level
-//! abstractions like `CompressorWriter<W>` or `DecompressorReader<R>`.
+//! It is recommended to not use the encoder directly but instead pass it onto
+//! the higher level abstractions like `CompressorWriter<W>` or
+//! `DecompressorReader<R>`.
 
 #![deny(warnings)]
 #![deny(missing_docs)]
@@ -116,39 +125,34 @@
 pub mod decode;
 pub mod encode;
 
-pub use encode::BrotliEncoder;
-pub use encode::BrotliEncoderOptions;
-pub use encode::CompressorReader;
-pub use encode::CompressorWriter;
-
-pub use decode::BrotliDecoder;
-pub use decode::BrotliDecoderOptions;
-pub use decode::DecompressorReader;
-pub use decode::DecompressorWriter;
-
-use brotlic_sys::*;
-use std::os::raw::{c_int, c_void};
-use std::{fmt, io, ptr};
 use std::alloc::{GlobalAlloc, Layout};
 use std::error::Error;
+use std::os::raw::{c_int, c_void};
+use std::{fmt, io, ptr};
+
+use brotlic_sys::*;
+pub use decode::{BrotliDecoder, BrotliDecoderOptions, DecompressorReader, DecompressorWriter};
+pub use encode::{BrotliEncoder, BrotliEncoderOptions, CompressorReader, CompressorWriter};
 
 /// Quality level of the brotli compression
 ///
-/// [`Quality::best()`] represents the best available quality that maximizes the compression ratio
-/// at the cost of run-time speed. [`Quality::worst()`] represents the worst available quality that
-/// maximizes speed at the expense of compression ratio.
+/// [`Quality::best()`] represents the best available quality that maximizes the
+/// compression ratio at the cost of run-time speed. [`Quality::worst()`]
+/// represents the worst available quality that maximizes speed at the expense
+/// of compression ratio.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Quality(u8);
 
 impl Quality {
     /// Attempts to create a new brotli compression quality.
     ///
-    /// The range of valid qualities is from 0 to 11 inclusive, where 0 is the worst possible
-    /// quality and 11 is the best possible quality.
+    /// The range of valid qualities is from 0 to 11 inclusive, where 0 is the
+    /// worst possible quality and 11 is the best possible quality.
     ///
     /// # Errors
     ///
-    /// An [`Err`] will be returned if the `level` is out of the range of valid qualities.
+    /// An [`Err`] will be returned if the `level` is out of the range of valid
+    /// qualities.
     ///
     /// # Examples
     ///
@@ -169,10 +173,11 @@ impl Quality {
         }
     }
 
-    /// Creates a new brotli compression quality without checking whether the integer represents a
-    /// valid quality. The range of valid qualities is from 0 to 11 inclusive, where 0 is the worst
-    /// possible quality and 11 is the best possible quality. Using any `level` outside of this
-    /// range will result in undefined behaviour.
+    /// Creates a new brotli compression quality without checking whether the
+    /// integer represents a valid quality. The range of valid qualities is from
+    /// 0 to 11 inclusive, where 0 is the worst possible quality and 11 is the
+    /// best possible quality. Using any `level` outside of this range will
+    /// result in undefined behaviour.
     ///
     /// # Safety
     ///
@@ -194,8 +199,8 @@ impl Quality {
 
     /// The highest quality for brotli compression.
     ///
-    /// This quality yields maximum compression ratio at the expense of run-time speed. It's
-    /// currently set to 11.
+    /// This quality yields maximum compression ratio at the expense of run-time
+    /// speed. It's currently set to 11.
     ///
     /// # Examples
     ///
@@ -231,8 +236,8 @@ impl Quality {
 
     /// The worst quality to use for brotli compression.
     ///
-    /// This quality yields the worst compression ratio while offering the highest run-time speed.
-    /// It's currently set to 0.
+    /// This quality yields the worst compression ratio while offering the
+    /// highest run-time speed. It's currently set to 0.
     ///
     /// # Examples
     ///
@@ -277,10 +282,11 @@ impl Default for Quality {
 
 /// The sliding window size (in bits) to use for compression.
 ///
-/// Its maximum size is currently limited to 16 MiB, as specified in RFC7932 (Brotli proper).
-/// Larger window sizes are supported via [`LargeWindowSize`], however note that decompression
-/// support for these have to be explicitly enabled. This can be configured via
-/// [`large_window_size`] for the matching [`BrotliDecoder`].
+/// Its maximum size is currently limited to 16 MiB, as specified in RFC7932
+/// (Brotli proper). Larger window sizes are supported via [`LargeWindowSize`],
+/// however note that decompression support for these have to be explicitly
+/// enabled. This can be configured via [`large_window_size`] for the matching
+/// [`BrotliDecoder`].
 ///
 /// [`large_window_size`]: decode::BrotliDecoderOptions::large_window_size()
 /// [`BrotliDecoder`]: decode::BrotliDecoder
@@ -294,7 +300,8 @@ impl WindowSize {
     ///
     /// # Errors
     ///
-    /// An [`Err`] will be returned if the `bits` are out of the range of valid window sizes.
+    /// An [`Err`] will be returned if the `bits` are out of the range of valid
+    /// window sizes.
     ///
     /// # Examples
     ///
@@ -315,10 +322,12 @@ impl WindowSize {
         }
     }
 
-    /// Constructs a new sliding window size (in bits) to use for brotli compression.
+    /// Constructs a new sliding window size (in bits) to use for brotli
+    /// compression.
     ///
-    /// Valid `bits` range from 10 (1 KiB) to 24 (16 MiB) inclusive. Using a number of `bits`
-    /// outside of that range results in undefined behaviour.
+    /// Valid `bits` range from 10 (1 KiB) to 24 (16 MiB) inclusive. Using a
+    /// number of `bits` outside of that range results in undefined
+    /// behaviour.
     ///
     /// # Safety
     ///
@@ -340,9 +349,10 @@ impl WindowSize {
 
     /// Constructs the best sliding window size to use for brotli compression.
     ///
-    /// This is currently limited to 24 bits (16 MiB) due to RFC7932 (Brotli proper). To use larger
-    /// sliding window sizes, please refer to [`LargeWindowSize`]. Note however that explicit
-    /// support has to be enabled by the decoder. This is supported by enabling
+    /// This is currently limited to 24 bits (16 MiB) due to RFC7932 (Brotli
+    /// proper). To use larger sliding window sizes, please refer to
+    /// [`LargeWindowSize`]. Note however that explicit support has to be
+    /// enabled by the decoder. This is supported by enabling
     /// [`large_window_size`] when constructing a [`BrotliDecoder`].
     ///
     /// [`large_window_size`]: decode::BrotliDecoderOptions::large_window_size()
@@ -362,7 +372,8 @@ impl WindowSize {
         WindowSize(BROTLI_MAX_WINDOW_BITS)
     }
 
-    /// Constructs the default sliding window size to use for brotli compression.
+    /// Constructs the default sliding window size to use for brotli
+    /// compression.
     ///
     /// This is currently set to 22 bits (4 MiB).
     ///
@@ -430,8 +441,8 @@ impl TryFrom<LargeWindowSize> for WindowSize {
 
     /// Attempts to construct a [`WindowSize`] from a [`LargeWindowSize`].
     ///
-    /// This only works if the large window size is currently set to a value lower or equal to
-    /// [`WindowSize::best()`].
+    /// This only works if the large window size is currently set to a value
+    /// lower or equal to [`WindowSize::best()`].
     ///
     /// # Errors
     ///
@@ -443,9 +454,9 @@ impl TryFrom<LargeWindowSize> for WindowSize {
 
 /// The large sliding window size (in bits) to use for compression.
 ///
-/// Note that using a large sliding window size for a particular compressor requires explicit
-/// support by the decompressor. This is supported by enabling [`large_window_size`] when
-/// constructing a [`BrotliDecoder`].
+/// Note that using a large sliding window size for a particular compressor
+/// requires explicit support by the decompressor. This is supported by enabling
+/// [`large_window_size`] when constructing a [`BrotliDecoder`].
 ///
 /// [`large_window_size`]: decode::BrotliDecoderOptions::large_window_size()
 /// [`BrotliDecoder`]: decode::BrotliDecoder
@@ -453,13 +464,15 @@ impl TryFrom<LargeWindowSize> for WindowSize {
 pub struct LargeWindowSize(u8);
 
 impl LargeWindowSize {
-    /// Constructs a new large sliding window size (in bits) to use for brotli compression.
+    /// Constructs a new large sliding window size (in bits) to use for brotli
+    /// compression.
     ///
     /// Valid `bits` range from 10 (1 KiB) to 30 (1 GiB) inclusive.
     ///
     /// # Errors
     ///
-    /// An [`Err`] will be returned if the `bits` are out of the range of valid large window sizes.
+    /// An [`Err`] will be returned if the `bits` are out of the range of valid
+    /// large window sizes.
     ///
     /// # Examples
     ///
@@ -480,10 +493,11 @@ impl LargeWindowSize {
         }
     }
 
-    /// Constructs a new large sliding window size (in bits) to use for brotli compression.
+    /// Constructs a new large sliding window size (in bits) to use for brotli
+    /// compression.
     ///
-    /// Valid `bits` range from 10 (1 KiB) to 30 (1 GiB) inclusive. Using a number of `bits` outside
-    /// of that range results in undefined behaviour.
+    /// Valid `bits` range from 10 (1 KiB) to 30 (1 GiB) inclusive. Using a
+    /// number of `bits` outside of that range results in undefined behaviour.
     ///
     /// # Safety
     ///
@@ -503,10 +517,12 @@ impl LargeWindowSize {
         LargeWindowSize(bits)
     }
 
-    /// Constructs the best large sliding window size to use for brotli compression.
+    /// Constructs the best large sliding window size to use for brotli
+    /// compression.
     ///
-    /// This is currently set to 30 bits (1 GiB). Note that this requires explicit support by the
-    /// decompressor. For more information see [`LargeWindowSize`].
+    /// This is currently set to 30 bits (1 GiB). Note that this requires
+    /// explicit support by the decompressor. For more information see
+    /// [`LargeWindowSize`].
     ///
     /// # Examples
     ///
@@ -522,7 +538,8 @@ impl LargeWindowSize {
         LargeWindowSize(BROTLI_LARGE_MAX_WINDOW_BITS)
     }
 
-    /// Constructs the default large sliding window size to use for brotli compression.
+    /// Constructs the default large sliding window size to use for brotli
+    /// compression.
     ///
     /// This is currently set to 22 bits (4 MiB).
     ///
@@ -540,7 +557,8 @@ impl LargeWindowSize {
         LargeWindowSize(BROTLI_DEFAULT_WINDOW)
     }
 
-    /// Constructs the worst large sliding window size to use for brotli compression
+    /// Constructs the worst large sliding window size to use for brotli
+    /// compression
     ///
     /// This is currently set to 10 bits (1 KiB).
     ///
@@ -588,8 +606,8 @@ impl Default for LargeWindowSize {
 impl From<WindowSize> for LargeWindowSize {
     /// Constructs a [`LargeWindowSize`] from a [`WindowSize`].
     ///
-    /// This always works because a `LargeWindowSize` covers a larger range than the regular
-    /// `WindowSize`. The inverse is not true, however.
+    /// This always works because a `LargeWindowSize` covers a larger range than
+    /// the regular `WindowSize`. The inverse is not true, however.
     fn from(window_size: WindowSize) -> Self {
         LargeWindowSize(window_size.0)
     }
@@ -597,9 +615,10 @@ impl From<WindowSize> for LargeWindowSize {
 
 /// The recommended input block size (in bits) to use for compression.
 ///
-/// The compressor may reduce this value at its leisure, for example when the input size is small.
-/// Larger block sizes allow better compression at the expense of using more memory. Rough formula
-/// for memory required is `3 << bits` bytes.
+/// The compressor may reduce this value at its leisure, for example when the
+/// input size is small. Larger block sizes allow better compression at the
+/// expense of using more memory. Rough formula for memory required is `3 <<
+/// bits` bytes.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct BlockSize(u8);
 
@@ -610,7 +629,8 @@ impl BlockSize {
     ///
     /// # Errors
     ///
-    /// An [`Err`] will be returned if the `bits` are out of the range of valid block sizes.
+    /// An [`Err`] will be returned if the `bits` are out of the range of valid
+    /// block sizes.
     ///
     /// # Examples
     ///
@@ -633,8 +653,8 @@ impl BlockSize {
 
     /// Constructs a new block size (in bits) to use for brotli compression.
     ///
-    /// Valid `bits` range from 16 to 24 inclusive. Using any number of bits outside of that range
-    /// results in undefined behaviour.
+    /// Valid `bits` range from 16 to 24 inclusive. Using any number of bits
+    /// outside of that range results in undefined behaviour.
     ///
     /// # Safety
     ///
@@ -645,7 +665,7 @@ impl BlockSize {
     /// ```
     /// use brotlic::BlockSize;
     ///
-    /// let block_size = unsafe{ BlockSize::new_unchecked(22) };
+    /// let block_size = unsafe { BlockSize::new_unchecked(22) };
     ///
     /// assert_eq!(block_size.bits(), 22);
     /// ```
@@ -655,8 +675,8 @@ impl BlockSize {
 
     /// Constructs the best block size (in bits) to use for brotli compression.
     ///
-    /// This will allow better compression at the expense of memory usage. Currently it is set to
-    /// 24 bits.
+    /// This will allow better compression at the expense of memory usage.
+    /// Currently it is set to 24 bits.
     ///
     /// # Examples
     ///
@@ -674,8 +694,8 @@ impl BlockSize {
 
     /// Constructs the worst block size (in bits) to use for brotli compression.
     ///
-    /// This will consume the least amount of memory at the expense of compression ratio. Currently
-    /// it is set to 16 bits.
+    /// This will consume the least amount of memory at the expense of
+    /// compression ratio. Currently it is set to 16 bits.
     ///
     /// # Examples
     ///
@@ -767,7 +787,8 @@ impl From<DecompressError> for io::Error {
     }
 }
 
-/// An error returned by [`BrotliEncoderOptions::build`] and [`BrotliDecoderOptions::build`]
+/// An error returned by [`BrotliEncoderOptions::build`] and
+/// [`BrotliDecoderOptions::build`]
 ///
 /// [`BrotliEncoderOptions::build`]: encode::BrotliEncoderOptions::build
 /// [`BrotliDecoderOptions::build`]: decode::BrotliDecoderOptions::build
@@ -776,14 +797,15 @@ impl From<DecompressError> for io::Error {
 pub enum SetParameterError {
     /// The encoder or decoder returned an error.
     ///
-    /// This error originates from `BrotliEncoderSetParameter` or `BrotliDecoderSetParameter` being
-    /// unsuccessful.
+    /// This error originates from `BrotliEncoderSetParameter` or
+    /// `BrotliDecoderSetParameter` being unsuccessful.
     Generic,
 
     /// Postfix bits were out of range.
     InvalidPostfix,
 
-    /// Direct distance codes were out of range or were given in invalid increments.
+    /// Direct distance codes were out of range or were given in invalid
+    /// increments.
     InvalidDirectDistanceCodes,
 
     /// The stream offset was beyond its maximum offset.
@@ -817,14 +839,15 @@ impl fmt::Display for SetParameterError {
 
 impl Error for SetParameterError {}
 
-/// Read all bytes from `input` and compress them into `output`, returning how many bytes were
-/// written.
+/// Read all bytes from `input` and compress them into `output`, returning how
+/// many bytes were written.
 ///
-/// The compression will use the specified `quality` (see [`Quality`] for more information),
-/// `window_size` (see [`WindowSize`] for more information) and `mode` (see [`CompressionMode`] for
-/// more information). The compressed `input` using the specified compression settings must fit into
-/// `output`, otherwise an error is returned and the compression will be aborted. To get an upper
-/// bound when `quality` is 2 or higher, use [`compress_bound`].
+/// The compression will use the specified `quality` (see [`Quality`] for more
+/// information), `window_size` (see [`WindowSize`] for more information) and
+/// `mode` (see [`CompressionMode`] for more information). The compressed
+/// `input` using the specified compression settings must fit into `output`,
+/// otherwise an error is returned and the compression will be aborted. To get
+/// an upper bound when `quality` is 2 or higher, use [`compress_bound`].
 ///
 /// # Errors
 ///
@@ -843,11 +866,11 @@ impl Error for SetParameterError {}
 /// let mut output = vec![0; 1024];
 ///
 /// let bytes_written = compress(
-///      input.as_slice(),
-///      output.as_mut_slice(),
-///      Quality::default(),
-///      WindowSize::default(),
-///      CompressionMode::Generic
+///     input.as_slice(),
+///     output.as_mut_slice(),
+///     Quality::default(),
+///     WindowSize::default(),
+///     CompressionMode::Generic,
 /// )?;
 ///
 /// assert!(bytes_written < input.len());
@@ -884,10 +907,11 @@ pub fn compress(
 
 /// Returns an upper bound for compression.
 ///
-/// Given an input of `input_size` bytes in size and a `quality`, determine an upper bound for
-/// compression. This may be larger than `input_size`. The result is only valid for a quality of at
-/// least `2`, as per documentation of `BrotliEncoderMaxCompressedSize`. For qualities lower than
-/// `2`, `None` will be returned.
+/// Given an input of `input_size` bytes in size and a `quality`, determine an
+/// upper bound for compression. This may be larger than `input_size`. The
+/// result is only valid for a quality of at least `2`, as per documentation of
+/// `BrotliEncoderMaxCompressedSize`. For qualities lower than `2`, `None` will
+/// be returned.
 #[doc(alias = "BrotliEncoderMaxCompressedSize")]
 pub fn compress_bound(input_size: usize, quality: Quality) -> Option<usize> {
     if quality.0 >= 2 {
@@ -897,11 +921,11 @@ pub fn compress_bound(input_size: usize, quality: Quality) -> Option<usize> {
     }
 }
 
-/// Read all bytes from `input` and decompress them into `output`, returning how many bytes were
-/// written.
+/// Read all bytes from `input` and decompress them into `output`, returning how
+/// many bytes were written.
 ///
-/// The uncompressed `input` must fit into `output`, otherwise an error is returned and the
-/// decompression will be aborted.
+/// The uncompressed `input` must fit into `output`, otherwise an error is
+/// returned and the decompression will be aborted.
 ///
 /// # Errors
 ///
@@ -914,18 +938,18 @@ pub fn compress_bound(input_size: usize, quality: Quality) -> Option<usize> {
 /// # Examples
 ///
 /// ```
-/// use brotlic::{compress, CompressionMode, decompress, Quality, WindowSize};
+/// use brotlic::{compress, decompress, CompressionMode, Quality, WindowSize};
 ///
 /// let input = vec![0; 1024];
 /// let mut encoded = vec![1; 1024];
 /// let mut decoded = vec![2; 1024];
 ///
 /// let bytes_written = compress(
-///      input.as_slice(),
-///      encoded.as_mut_slice(),
-///      Quality::default(),
-///      WindowSize::default(),
-///      CompressionMode::Generic
+///     input.as_slice(),
+///     encoded.as_mut_slice(),
+///     Quality::default(),
+///     WindowSize::default(),
+///     CompressionMode::Generic,
 /// )?;
 ///
 /// let encoded = &encoded[..bytes_written];
@@ -957,14 +981,14 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> Result<usize, DecompressEr
 
 /// An error returned by `into_inner`.
 ///
-/// This error combines an error that happened while processing data, and the instance
-/// object which may be used to recover from the condition.
+/// This error combines an error that happened while processing data, and the
+/// instance object which may be used to recover from the condition.
 #[derive(Debug)]
 pub struct IntoInnerError<I>(I, io::Error);
 
 impl<I> IntoInnerError<I> {
-    fn new(instance: I, error: io::Error) -> Self {
-        Self(instance, error)
+    fn new(inner: I, error: io::Error) -> Self {
+        Self(inner, error)
     }
 
     /// Returns the error which caused the call to `into_inner()` to fail.
@@ -977,14 +1001,14 @@ impl<I> IntoInnerError<I> {
         self.0
     }
 
-    /// Returns the error which caused the `into_inner` call to fail. This is used to obtain
-    /// ownership of the error in contrast to `error`.
+    /// Returns the error which caused the `into_inner` call to fail. This is
+    /// used to obtain ownership of the error in contrast to `error`.
     pub fn into_error(self) -> io::Error {
         self.1
     }
 
-    /// Returns both the error and the instance that generated it. This is used to obtain ownership
-    /// of both of them.
+    /// Returns both the error and the instance that generated it. This is used
+    /// to obtain ownership of both of them.
     pub fn into_parts(self) -> (io::Error, I) {
         (self.1, self.0)
     }

@@ -1,7 +1,7 @@
 //! Module that contains the brotli decoder instances
 //!
-//! Contains decompression abstractions over [`Read`] and [`Write`] and a dedicated low-level
-//! encoder.
+//! Contains decompression abstractions over [`Read`] and [`Write`] and a
+//! dedicated low-level encoder.
 //!
 //! [`Read`]: https://doc.rust-lang.org/stable/std/io/trait.Read.html
 //! [`Write`]: https://doc.rust-lang.org/stable/std/io/trait.Write.html
@@ -18,9 +18,10 @@ use crate::{IntoInnerError, SetParameterError};
 
 /// A reference to a brotli decoder.
 ///
-/// This decoder contains internal state of the decoding process. This low-level wrapper intended to
-/// be used for people who are familiar with the C API. For higher level abstractions, see
-/// [`DecompressorReader`] and [`DecompressorWriter`].
+/// This decoder contains internal state of the decoding process. This low-level
+/// wrapper intended to be used for people who are familiar with the C API. For
+/// higher level abstractions, see [`DecompressorReader`] and
+/// [`DecompressorWriter`].
 pub struct BrotliDecoder {
     state: *mut BrotliDecoderState,
 
@@ -86,17 +87,21 @@ impl BrotliDecoder {
 
     /// Decompresses the input stream to the output stream.
     ///
-    /// This is a low-level API, for higher level abstractions see [`DecompressorReader`] or
-    /// [`DecompressorWriter`]. Returns the number of bytes that were read, written and some
-    /// additional information. Bytes are read from `input`, the number of bytes read is returned
-    /// in the `bytes_read` field of the result. The `input` is never overconsumed, so it could be
-    /// passed to the next consumer after decoding is complete. Bytes are written to `output`,
-    /// the number of bytes written is returned in the `bytes_written` field of the result. The
-    /// `info` field of the result communicates the state of the decoding process.
+    /// This is a low-level API, for higher level abstractions see
+    /// [`DecompressorReader`] or [`DecompressorWriter`]. Returns the number of
+    /// bytes that were read, written and some additional information. Bytes are
+    /// read from `input`, the number of bytes read is returned in the
+    /// `bytes_read` field of the result. The `input` is never overconsumed, so
+    /// it could be passed to the next consumer after decoding is complete.
+    /// Bytes are written to `output`, the number of bytes written is returned
+    /// in the `bytes_written` field of the result. The `info` field of the
+    /// result communicates the state of the decoding process.
     ///
-    /// if `info` is [`DecoderInfo::NeedsMoreInput`], more input is required to continue decoding.
-    /// Likewise, if `info` is [`DecoderInfo::NeedsMoreOutput`], more output is required to continue
-    /// the decoding conversion. [`DecoderInfo::Finished`] indicates that the decoding has finished.
+    /// if `info` is [`DecoderInfo::NeedsMoreInput`], more input is required to
+    /// continue decoding. Likewise, if `info` is
+    /// [`DecoderInfo::NeedsMoreOutput`], more output is required to continue
+    /// the decoding conversion. [`DecoderInfo::Finished`] indicates that the
+    /// decoding has finished.
     #[doc(alias = "BrotliDecoderDecompressStream")]
     pub fn decompress(
         &mut self,
@@ -142,7 +147,8 @@ impl BrotliDecoder {
         })
     }
 
-    /// Convenience function to call method [`Self::decompress`] with only input.
+    /// Convenience function to call method [`Self::decompress`] with only
+    /// input.
     pub fn give_input(&mut self, input: &[u8]) -> Result<(usize, DecoderInfo), DecodeError> {
         let res = self.decompress(input, &mut [])?;
 
@@ -155,15 +161,17 @@ impl BrotliDecoder {
         unsafe { BrotliDecoderHasMoreOutput(self.state) != 0 }
     }
 
-    /// Checks if the decoder has more output and if so, returns a slice to its internal output
-    /// buffer. Each byte returned from the slice is considered "consumed" and must be used as it
-    /// will not be returned again. Encoder output is not guaranteed to be contagious, which means
-    /// that this function can return `Some(&[u8])` multiple times. Only when the method returns
-    /// `None` is when there is no more output available by the decoder.
+    /// Checks if the decoder has more output and if so, returns a slice to its
+    /// internal output buffer. Each byte returned from the slice is considered
+    /// "consumed" and must be used as it will not be returned again. Encoder
+    /// output is not guaranteed to be contagious, which means that this
+    /// function can return `Some(&[u8])` multiple times. Only when the method
+    /// returns `None` is when there is no more output available by the decoder.
     ///
     /// # Safety
     ///
-    /// For every consecutive call of this function, the previous slice becomes invalidated.
+    /// For every consecutive call of this function, the previous slice becomes
+    /// invalidated.
     #[doc(alias = "BrotliDecoderTakeOutput")]
     pub unsafe fn take_output(&mut self) -> Option<&[u8]> {
         if self.has_output() {
@@ -312,9 +320,7 @@ impl Drop for BrotliDecoder {
 /// ```
 /// use brotlic::BrotliDecoderOptions;
 ///
-/// let encoder = BrotliDecoderOptions::new()
-///     .large_window_size(true)
-///     .build();
+/// let encoder = BrotliDecoderOptions::new().large_window_size(true).build();
 /// ```
 #[derive(Debug, Clone)]
 pub struct BrotliDecoderOptions {
@@ -325,8 +331,8 @@ pub struct BrotliDecoderOptions {
 impl BrotliDecoderOptions {
     /// Creates a new blank set decoder options.
     ///
-    /// initially no modifications are applied to the decoder and everything is set to its default
-    /// values.
+    /// initially no modifications are applied to the decoder and everything is
+    /// set to its default values.
     pub fn new() -> Self {
         BrotliDecoderOptions {
             disable_ring_buffer_reallocation: None,
@@ -336,7 +342,8 @@ impl BrotliDecoderOptions {
 
     /// Disable "canny" ring buffer allocation strategy.
     ///
-    /// Ring buffer is allocated according to window size, despite the real size of the content.
+    /// Ring buffer is allocated according to window size, despite the real size
+    /// of the content.
     pub fn disable_ring_buffer_reallocation(
         &mut self,
         disable_ring_buffer_reallocation: bool,
@@ -345,10 +352,11 @@ impl BrotliDecoderOptions {
         self
     }
 
-    /// Flag that determines if this decoder supports non standard large window sizes. By default,
-    /// this is turned off and window sizes are limited by RFC7932 (Brotli proper). To support
-    /// large window sizes outside of the specification, this flag must be enabled. For more
-    /// information see [`LargeWindowSize`].
+    /// Flag that determines if this decoder supports non standard large window
+    /// sizes. By default, this is turned off and window sizes are limited by
+    /// RFC7932 (Brotli proper). To support large window sizes outside of the
+    /// specification, this flag must be enabled. For more information see
+    /// [`LargeWindowSize`].
     ///
     /// [`LargeWindowSize`]: crate::LargeWindowSize
     pub fn large_window_size(&mut self, large_window_size: bool) -> &mut Self {
@@ -360,7 +368,8 @@ impl BrotliDecoderOptions {
     ///
     /// # Errors
     ///
-    /// If any of the preconditions of the parameters are violated, an error is returned.
+    /// If any of the preconditions of the parameters are violated, an error is
+    /// returned.
     #[doc(alias = "BrotliDecoderSetParameter")]
     pub fn build(&self) -> Result<BrotliDecoder, SetParameterError> {
         let mut decoder = BrotliDecoder::new();
@@ -370,11 +379,13 @@ impl BrotliDecoderOptions {
         Ok(decoder)
     }
 
-    /// Creates a brotli decoder with the specified settings using allocator `alloc`.
+    /// Creates a brotli decoder with the specified settings using allocator
+    /// `alloc`.
     ///
     /// # Errors
     ///
-    /// If any of the preconditions of the parameters are violated, an error is returned.
+    /// If any of the preconditions of the parameters are violated, an error is
+    /// returned.
     #[doc(alias = "BrotliDecoderSetParameter")]
     pub fn build_in<A>(&self, alloc: A) -> Result<BrotliDecoder, SetParameterError>
     where
@@ -419,11 +430,13 @@ pub struct DecodeResult {
     pub bytes_read: usize,
     /// The number of bytes written to `output`.
     pub bytes_written: usize,
-    /// Information the decoder gave on whether its finished or needs more input or output.
+    /// Information the decoder gave on whether its finished or needs more input
+    /// or output.
     pub info: DecoderInfo,
 }
 
-/// Additional information provided by the decoder on how decompression should proceed.
+/// Additional information provided by the decoder on how decompression should
+/// proceed.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum DecoderInfo {
     /// The decoder has finished decompressing all input data.
@@ -505,11 +518,13 @@ impl From<DecodeError> for io::Error {
 ///
 /// # Examples
 ///
-/// Suppose the file `test.brotli` contains brotli compressed data. Let's try to decompress it:
+/// Suppose the file `test.brotli` contains brotli compressed data. Let's try to
+/// decompress it:
 ///
 /// ```no_run
 /// use std::fs::File;
 /// use std::io::Read;
+///
 /// use brotlic::DecompressorWriter;
 ///
 /// let mut input = File::open("test.brotli")?; // test.brotli is brotli compressed
@@ -540,7 +555,8 @@ impl<R: BufRead> DecompressorReader<R> {
         }
     }
 
-    /// Creates a new `DecompressorReader<R>` with a newly created decoder using allocator `alloc`.
+    /// Creates a new `DecompressorReader<R>` with a newly created decoder using
+    /// allocator `alloc`.
     ///
     /// # Panics
     ///
@@ -560,8 +576,9 @@ impl<R: BufRead> DecompressorReader<R> {
     /// # Examples
     ///
     /// ```
-    /// use brotlic::{BrotliDecoderOptions, DecompressorReader};
     /// use std::io::Read;
+    ///
+    /// use brotlic::{BrotliDecoderOptions, DecompressorReader};
     ///
     /// let decoder = BrotliDecoderOptions::new()
     ///     .disable_ring_buffer_reallocation(true)
@@ -591,7 +608,8 @@ impl<R: BufRead> DecompressorReader<R> {
     ///
     /// # Errors
     ///
-    /// An [`Err`] will be returned if the decompression stream has not been finished.
+    /// An [`Err`] will be returned if the decompression stream has not been
+    /// finished.
     pub fn into_inner(self) -> Result<R, IntoInnerError<DecompressorReader<R>>> {
         if self.decoder.is_finished() {
             Ok(self.inner)
@@ -603,10 +621,11 @@ impl<R: BufRead> DecompressorReader<R> {
         }
     }
 
-    /// Disassembles this `DecompressorReader<R>`, returning the underlying reader and decoder.
+    /// Disassembles this `DecompressorReader<R>`, returning the underlying
+    /// reader and decoder.
     ///
-    /// `into_parts` makes no attempt to validate that the decompression stream finished and cannot
-    /// fail.
+    /// `into_parts` makes no attempt to validate that the decompression stream
+    /// finished and cannot fail.
     pub fn into_parts(self) -> (R, BrotliDecoder) {
         (self.inner, self.decoder)
     }
@@ -642,7 +661,8 @@ impl<R: BufRead> Read for DecompressorReader<R> {
 
 /// Wraps a writer and decompresses its output.
 ///
-/// `DecompressorWriter<R>` wraps a writer and adds brotli decompression to the output.
+/// `DecompressorWriter<R>` wraps a writer and adds brotli decompression to the
+/// output.
 ///
 /// # Examples
 ///
@@ -651,6 +671,7 @@ impl<R: BufRead> Read for DecompressorReader<R> {
 /// ```no_run
 /// use std::fs::File;
 /// use std::io;
+///
 /// use brotlic::DecompressorWriter;
 ///
 /// let mut input = File::open("test.brotli")?; // test.brotli is brotli compressed
@@ -684,7 +705,8 @@ impl<W: Write> DecompressorWriter<W> {
         }
     }
 
-    /// Creates a new `DecompressorWriter<W>` with a newly created decoder using allocator `alloc`.
+    /// Creates a new `DecompressorWriter<W>` with a newly created decoder using
+    /// allocator `alloc`.
     ///
     /// # Panics
     ///
@@ -706,6 +728,7 @@ impl<W: Write> DecompressorWriter<W> {
     ///
     /// ```
     /// use std::io::Write;
+    ///
     /// use brotlic::{BrotliDecoderOptions, DecompressorReader, DecompressorWriter};
     ///
     /// let decoder = BrotliDecoderOptions::new()
@@ -713,7 +736,7 @@ impl<W: Write> DecompressorWriter<W> {
     ///     .build()?;
     ///
     /// let mut writer = DecompressorWriter::with_decoder(decoder, Vec::new());
-    /// Ok::<(), brotlic::SetParameterError>(())
+    /// # Ok::<(), brotlic::SetParameterError>(())
     /// ```
     pub fn with_decoder(decoder: BrotliDecoder, inner: W) -> Self {
         DecompressorWriter {
@@ -737,14 +760,15 @@ impl<W: Write> DecompressorWriter<W> {
 
     /// Unwraps this `DecompressorWriter<W>`, returning the underlying writer.
     ///
-    /// If the decompression stream is validated before finishing and will return an [`Err`]
-    /// otherwise. The `DecompressorWriter<W>` will not overcome its input, if an adjacent second
-    /// compression stream follows it can be read by another `DecompressorWriter<W>` without
-    /// length-prefixing.
+    /// If the decompression stream is validated before finishing and will
+    /// return an [`Err`] otherwise. The `DecompressorWriter<W>` will not
+    /// overcome its input, if an adjacent second compression stream follows it
+    /// can be read by another `DecompressorWriter<W>` without length-prefixing.
     ///
     /// # Errors
     ///
-    /// An [`Err`] will be returned if the decompression stream has not been finished.
+    /// An [`Err`] will be returned if the decompression stream has not been
+    /// finished.
     pub fn into_inner(self) -> Result<W, IntoInnerError<DecompressorWriter<W>>> {
         if self.decoder.is_finished() {
             Ok(self.into_parts().0)
@@ -756,13 +780,15 @@ impl<W: Write> DecompressorWriter<W> {
         }
     }
 
-    /// Disassembles this `DecompressorWriter<W>`, returning the underlying writer and decoder.
+    /// Disassembles this `DecompressorWriter<W>`, returning the underlying
+    /// writer and decoder.
     ///
-    /// If the underlying writer panicked, it is not known what portion of the data was written.
-    /// In this case, we return `WriterPanicked` to get the encoder back.
+    /// If the underlying writer panicked, it is not known what portion of the
+    /// data was written. In this case, we return `WriterPanicked` to get the
+    /// encoder back.
     ///
-    /// `into_parts` makes no attempt to validate that the decompression stream finished and cannot
-    /// fail.
+    /// `into_parts` makes no attempt to validate that the decompression stream
+    /// finished and cannot fail.
     pub fn into_parts(self) -> (W, Result<BrotliDecoder, WriterPanicked>) {
         let inner = self.inner;
         let decoder = self.decoder;
@@ -801,16 +827,18 @@ impl<W: Write> Write for DecompressorWriter<W> {
     }
 }
 
-/// Error returned from [`DecompressorWriter::into_inner`], when the underlying writer has
-/// previously panicked. Contains the decoder that was used for decompression.
+/// Error returned from [`DecompressorWriter::into_inner`], when the underlying
+/// writer has previously panicked. Contains the decoder that was used for
+/// decompression.
 #[derive(Debug)]
 pub struct WriterPanicked {
     decoder: BrotliDecoder,
 }
 
 impl WriterPanicked {
-    /// Returns the decoder that was used for decompression. It is unknown what data was fed to the
-    /// decoder, so simply using it to finish it is not a good idea.
+    /// Returns the decoder that was used for decompression. It is unknown what
+    /// data was fed to the decoder, so simply using it to finish it is not a
+    /// good idea.
     pub fn into_inner(self) -> BrotliDecoder {
         self.decoder
     }
@@ -821,8 +849,7 @@ impl Error for WriterPanicked {}
 impl fmt::Display for WriterPanicked {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(
-            "DecompressorWriter inner writer panicked, what \
-            data remains unwritten is not known",
+            "DecompressorWriter inner writer panicked, what data remains unwritten is not known",
         )
     }
 }

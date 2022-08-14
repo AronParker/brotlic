@@ -1,9 +1,10 @@
+use std::io::Write;
+use std::iter;
+
 use brotlic::{BrotliEncoderOptions, Quality, WindowSize};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use rand::{Rng, RngCore, SeedableRng};
 use rand_pcg::Pcg32;
-use std::io::Write;
-use std::iter;
 
 fn brotli_compress(input: &[u8]) -> Vec<u8> {
     let mut compressor =
