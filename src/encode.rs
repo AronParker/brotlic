@@ -6,7 +6,6 @@
 //! [`Read`]: https://doc.rust-lang.org/stable/std/io/trait.Read.html
 //! [`Write`]: https://doc.rust-lang.org/stable/std/io/trait.Write.html
 
-use std::alloc::GlobalAlloc;
 use std::error::Error;
 use std::io::{BufRead, Read, Write};
 use std::{fmt, io, mem, ptr, slice};
@@ -26,10 +25,6 @@ use crate::{
 /// [`CompressorWriter`].
 pub struct BrotliEncoder {
     state: *mut BrotliEncoderState,
-
-    // this field is read read across FFI boundaries
-    #[allow(dead_code)]
-    alloc: Option<Box<Box<dyn GlobalAlloc>>>,
 }
 
 unsafe impl Send for BrotliEncoder {}
@@ -46,36 +41,7 @@ impl BrotliEncoder {
         let instance = unsafe { BrotliEncoderCreateInstance(None, None, ptr::null_mut()) };
 
         if !instance.is_null() {
-            BrotliEncoder {
-                state: instance,
-                alloc: None,
-            }
-        } else {
-            panic!("BrotliEncoderCreateInstance returned NULL: failed to allocate or initialize");
-        }
-    }
-
-    /// Constructs a new brotli encoder instance using allocator `alloc`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the encoder fails to be allocated or initialized
-    #[doc(alias = "BrotliEncoderCreateInstance")]
-    pub fn new_in<A>(alloc: A) -> Self
-    where
-        A: GlobalAlloc + 'static,
-    {
-        let alloc: Box<Box<dyn GlobalAlloc>> = Box::new(Box::new(alloc));
-        let alloc_ptr: *const Box<dyn GlobalAlloc> = alloc.as_ref();
-        let instance = unsafe {
-            BrotliEncoderCreateInstance(Some(crate::malloc), Some(crate::free), alloc_ptr as _)
-        };
-
-        if !instance.is_null() {
-            BrotliEncoder {
-                state: instance,
-                alloc: Some(alloc),
-            }
+            BrotliEncoder { state: instance }
         } else {
             panic!("BrotliEncoderCreateInstance returned NULL: failed to allocate or initialize");
         }
@@ -445,24 +411,6 @@ impl BrotliEncoderOptions {
         Ok(encoder)
     }
 
-    /// Creates a brotli encoder using the specified settings.
-    ///
-    /// # Errors
-    ///
-    /// If any of the preconditions of the parameters are violated, an error is
-    /// returned.
-    #[doc(alias = "BrotliEncoderSetParameter")]
-    pub fn build_in<A>(&self, alloc: A) -> Result<BrotliEncoder, SetParameterError>
-    where
-        A: GlobalAlloc + 'static,
-    {
-        let mut encoder = BrotliEncoder::new_in(alloc);
-
-        self.configure(&mut encoder)?;
-
-        Ok(encoder)
-    }
-
     fn configure(&self, encoder: &mut BrotliEncoder) -> Result<(), SetParameterError> {
         if let Some(mode) = self.mode {
             let key = BrotliEncoderParameter_BROTLI_PARAM_MODE;
@@ -638,23 +586,6 @@ impl<R: BufRead> CompressorReader<R> {
         }
     }
 
-    /// Creates a new `CompressorReader<R>` with a newly created encoder using
-    /// allocator `alloc`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the encoder fails to be allocated or initialized
-    pub fn new_in<A>(inner: R, alloc: A) -> Self
-    where
-        A: GlobalAlloc + 'static,
-    {
-        CompressorReader {
-            inner,
-            encoder: BrotliEncoder::new_in(alloc),
-            op: BrotliOperation::Process,
-        }
-    }
-
     /// Creates a new `CompressorReader<R>` with a specified encoder.
     ///
     /// # Examples
@@ -799,23 +730,6 @@ impl<W: Write> CompressorWriter<W> {
         CompressorWriter {
             inner,
             encoder: BrotliEncoder::new(),
-            panicked: false,
-        }
-    }
-
-    /// Creates a new `CompressorWriter<W>` with a newly created encoder using
-    /// allocator `alloc`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the encoder fails to be allocated or initialized
-    pub fn new_in<A>(inner: W, alloc: A) -> Self
-    where
-        A: GlobalAlloc + 'static,
-    {
-        CompressorWriter {
-            inner,
-            encoder: BrotliEncoder::new_in(alloc),
             panicked: false,
         }
     }

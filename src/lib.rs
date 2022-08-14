@@ -125,10 +125,9 @@
 pub mod decode;
 pub mod encode;
 
-use std::alloc::{GlobalAlloc, Layout};
 use std::error::Error;
-use std::os::raw::{c_int, c_void};
-use std::{fmt, io, ptr};
+use std::os::raw::c_int;
+use std::{fmt, io};
 
 use brotlic_sys::*;
 pub use decode::{BrotliDecoder, BrotliDecoderOptions, DecompressorReader, DecompressorWriter};
@@ -1025,39 +1024,5 @@ impl<I: fmt::Debug + Send> Error for IntoInnerError<I> {}
 impl<I> fmt::Display for IntoInnerError<I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.error().fmt(f)
-    }
-}
-
-const MIN_ALIGN: usize = 16;
-
-extern "C" fn malloc(opaque: *mut c_void, size: usize) -> *mut c_void {
-    let global_alloc = opaque as *const Box<dyn GlobalAlloc>;
-
-    if size > usize::MAX - 2 * MIN_ALIGN + 1 {
-        return ptr::null_mut();
-    }
-
-    unsafe {
-        let layout = Layout::from_size_align_unchecked(size + MIN_ALIGN, MIN_ALIGN);
-        let alloc = (*global_alloc).alloc(layout);
-        (alloc as *mut usize).write(size);
-
-        (alloc.add(MIN_ALIGN)) as _
-    }
-}
-
-extern "C" fn free(opaque: *mut c_void, address: *mut c_void) {
-    if address.is_null() {
-        return;
-    }
-
-    let global_alloc = opaque as *const Box<dyn GlobalAlloc>;
-
-    unsafe {
-        let alloc = (address as *mut u8).sub(MIN_ALIGN);
-        let size = (alloc as *const usize).read();
-        let layout = Layout::from_size_align_unchecked(size + MIN_ALIGN, MIN_ALIGN);
-
-        (*global_alloc).dealloc(alloc, layout);
     }
 }

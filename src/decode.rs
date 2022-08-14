@@ -6,7 +6,6 @@
 //! [`Read`]: https://doc.rust-lang.org/stable/std/io/trait.Read.html
 //! [`Write`]: https://doc.rust-lang.org/stable/std/io/trait.Write.html
 
-use std::alloc::GlobalAlloc;
 use std::error::Error;
 use std::ffi::CStr;
 use std::io::{BufRead, Read, Write};
@@ -24,10 +23,6 @@ use crate::{IntoInnerError, SetParameterError};
 /// [`DecompressorWriter`].
 pub struct BrotliDecoder {
     state: *mut BrotliDecoderState,
-
-    // this field is read read across FFI boundaries
-    #[allow(dead_code)]
-    alloc: Option<Box<Box<dyn GlobalAlloc>>>,
 }
 
 unsafe impl Send for BrotliDecoder {}
@@ -44,36 +39,7 @@ impl BrotliDecoder {
         let instance = unsafe { BrotliDecoderCreateInstance(None, None, ptr::null_mut()) };
 
         if !instance.is_null() {
-            BrotliDecoder {
-                state: instance,
-                alloc: None,
-            }
-        } else {
-            panic!("BrotliDecoderCreateInstance returned NULL: failed to allocate or initialize");
-        }
-    }
-
-    /// Constructs a new brotli decoder instance using allocator `alloc`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the decoder fails to be allocated or initialized
-    #[doc(alias = "BrotliDecoderCreateInstance")]
-    pub fn new_in<A>(alloc: A) -> Self
-    where
-        A: GlobalAlloc + 'static,
-    {
-        let alloc: Box<Box<dyn GlobalAlloc>> = Box::new(Box::new(alloc));
-        let alloc_ptr: *const Box<dyn GlobalAlloc> = alloc.as_ref();
-        let instance = unsafe {
-            BrotliDecoderCreateInstance(Some(crate::malloc), Some(crate::free), alloc_ptr as _)
-        };
-
-        if !instance.is_null() {
-            BrotliDecoder {
-                state: instance,
-                alloc: Some(alloc),
-            }
+            BrotliDecoder { state: instance }
         } else {
             panic!("BrotliDecoderCreateInstance returned NULL: failed to allocate or initialize");
         }
@@ -379,25 +345,6 @@ impl BrotliDecoderOptions {
         Ok(decoder)
     }
 
-    /// Creates a brotli decoder with the specified settings using allocator
-    /// `alloc`.
-    ///
-    /// # Errors
-    ///
-    /// If any of the preconditions of the parameters are violated, an error is
-    /// returned.
-    #[doc(alias = "BrotliDecoderSetParameter")]
-    pub fn build_in<A>(&self, alloc: A) -> Result<BrotliDecoder, SetParameterError>
-    where
-        A: GlobalAlloc + 'static,
-    {
-        let mut decoder = BrotliDecoder::new_in(alloc);
-
-        self.configure(&mut decoder)?;
-
-        Ok(decoder)
-    }
-
     fn configure(&self, decoder: &mut BrotliDecoder) -> Result<(), SetParameterError> {
         if let Some(disable_ring_buffer_reallocation) = self.disable_ring_buffer_reallocation {
             let key = BrotliDecoderParameter_BROTLI_DECODER_PARAM_DISABLE_RING_BUFFER_REALLOCATION;
@@ -555,22 +502,6 @@ impl<R: BufRead> DecompressorReader<R> {
         }
     }
 
-    /// Creates a new `DecompressorReader<R>` with a newly created decoder using
-    /// allocator `alloc`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the decoder fails to be allocated or initialized
-    pub fn new_in<A>(inner: R, alloc: A) -> Self
-    where
-        A: GlobalAlloc + 'static,
-    {
-        DecompressorReader {
-            inner,
-            decoder: BrotliDecoder::new_in(alloc),
-        }
-    }
-
     /// Creates a new `DecompressorReader<R>` with a specified decoder.
     ///
     /// # Examples
@@ -701,23 +632,6 @@ impl<W: Write> DecompressorWriter<W> {
         DecompressorWriter {
             inner,
             decoder: BrotliDecoder::new(),
-            panicked: false,
-        }
-    }
-
-    /// Creates a new `DecompressorWriter<W>` with a newly created decoder using
-    /// allocator `alloc`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the decoder fails to be allocated or initialized
-    pub fn new_in<A>(inner: W, alloc: A) -> Self
-    where
-        A: GlobalAlloc + 'static,
-    {
-        DecompressorWriter {
-            inner,
-            decoder: BrotliDecoder::new_in(alloc),
             panicked: false,
         }
     }
