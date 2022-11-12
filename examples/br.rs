@@ -13,8 +13,8 @@ fn main() {
         .arg(arg!(-d - -decompress))
         .get_matches();
 
-    let path = matches.value_of("FILE").expect("supplied by clap");
-    let compress = !matches.is_present("decompress");
+    let path = matches.get_one::<String>("FILE").expect("supplied by clap");
+    let compress = !matches.get_flag("decompress");
 
     if compress {
         let mut input_file = File::open(path).expect("failed to open input file");

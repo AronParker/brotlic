@@ -21,9 +21,9 @@ brotlic-sys = { version = "0.2.0", path = "brotlic-sys" }
 [dev-dependencies]
 brotli = "3.3.4"
 rand = "0.8.5"
-criterion = "0.3.5"
+criterion = "0.4.0"
 rand_pcg = "0.3.1"
-clap = "3.1.8"
+clap = "4.0.23"
 
 [lib]
 bench=false
