@@ -41,6 +41,7 @@ fn main() {
         ])
         .include("brotli/c/include")
         .define("BROTLI_BUILD_ENC_EXTRA_API", None)
+        .define("BROTLI_HAVE_LOG2", "1")
         .warnings(false)
         .compile("brotli");
 

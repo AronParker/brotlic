@@ -920,6 +920,22 @@ pub fn compress_bound(input_size: usize, quality: Quality) -> Option<usize> {
     }
 }
 
+/// Returns peak memory usage for a given quality and window size
+///
+/// Given an input of `input_size` bytes in size, a `quality` and a
+/// `window_size`, estimate the peak memory usage in bytes, not counting the
+/// memory needed for the input and output.
+#[doc(alias = "BrotliEncoderEstimatePeakMemoryUsage")]
+pub fn compress_estimate_max_mem_usage(
+    input_size: usize,
+    quality: Quality,
+    window_size: impl Into<LargeWindowSize>,
+) -> usize {
+    unsafe {
+        BrotliEncoderEstimatePeakMemoryUsage(quality.0 as _, window_size.into().0 as _, input_size)
+    }
+}
+
 /// Read all bytes from `input` and decompress them into `output`, returning how
 /// many bytes were written.
 ///
