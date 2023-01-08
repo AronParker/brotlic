@@ -1,4 +1,4 @@
-use brotlic::{CompressionMode, Quality, WindowSize};
+use brotlic::{CompressionMode, LargeWindowSize, Quality, WindowSize};
 
 mod common;
 
@@ -71,4 +71,25 @@ fn test_medium_entropy_large() {
 #[test]
 fn test_max_entropy_large() {
     verify(common::gen_max_entropy(8192).as_slice());
+}
+
+#[test]
+fn test_encoder_estimate_peak_memory_usage() {
+    let usage100 =
+        brotlic::compress_estimate_max_mem_usage(100, Quality::best(), WindowSize::best());
+
+    assert!(usage100 > 0);
+}
+
+#[test]
+fn test_google_brotli_issue_1001() {
+    let window_size =
+        brotlic::compress_estimate_max_mem_usage(1024 * 1024, Quality::best(), WindowSize::best());
+    let large_window_size = brotlic::compress_estimate_max_mem_usage(
+        1024 * 1024,
+        Quality::best(),
+        LargeWindowSize::best(),
+    );
+
+    assert!(large_window_size > window_size);
 }
